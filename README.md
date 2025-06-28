@@ -7,6 +7,6 @@
 - highlight, to print code with hightligh
 
 Installation for debian families user:
-```shell
+```console
 $ sudo apt install spirv-tools highlight
 ```

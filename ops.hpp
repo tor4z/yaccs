@@ -18,6 +18,26 @@ enum class DType
 }; // enum class DType
 
 
+enum class StorageClass
+{
+    UNIFORM_CONSTANT = 0,
+    INPUT,
+    UNIFORM,
+    OUTPUT,
+    WORKGROUP,
+    CROSS_WORKGROUP,
+    PRIVATE,
+    FUNCTION,
+    GENERIC,
+    PUSH_CONSTANT,
+    ATOMIC_COUNTER,
+    IMAGE,
+    STORAGE_BUFFER,
+    TILE_IMAGE_EXT,
+    NODE_PAYLOAD_AMDX,
+}; // enum class StorageClass
+
+
 struct Op
 {
     explicit Op(bool has_ret);
@@ -52,6 +72,15 @@ private:
     friend class CodeGen;
     uint32_t entry_id_;
 }; // struct OpEntryPoint
+
+
+struct OpVariable: public Op
+{
+    OpVariable() : Op(true) {}
+    virtual std::string_view name() const override { return "OpVariable"; }
+    uint32_t type_ptr_id;
+    StorageClass storage_class;
+}; // struct OpVariable
 
 
 struct OpFunction: public Op

@@ -7,6 +7,29 @@
 #include <utility>
 
 
+Variable::Variable(Program* prog, uint32_t type_ptr)
+    : prog_(prog)
+{
+    auto tp{prog_->get_type_ptr(type_ptr)};
+    op_var_ = new OpVariable();
+    op_var_->type_ptr_id = type_ptr;
+    op_var_->storage_class = tp->storage_class;
+}
+
+
+Variable::~Variable()
+{
+    delete op_var_;
+}
+
+
+void Variable::dump_spirv(std::ostream& os) const
+{
+    CodeGen::gen(os, op_var_);
+}
+
+
+
 Function::Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>& params)
     : prog_(prog)
     , op_fn_(new OpFunction())
@@ -17,7 +40,7 @@ Function::Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>
     , params_(params)
 {
     auto op_fn_type{prog_->get_type(DType::FN, ret_type)};
-    op_fn_->type_id = op_fn_type->id;
+    op_fn_->type_id = op_fn_type;
     op_fn_->ret_type_id = ret_type;
 }
 
@@ -58,12 +81,23 @@ Program::~Program()
     for (auto t : types_) {
         delete t;
     }
-    for (auto f : functions_) {
+    
+    for (auto f : fns_) {
         delete f;
     }
 
+    for (auto tp: type_ptrs_) {
+        delete tp;
+    }
+
+    for (auto v: vars_) {
+        delete v;
+    }
+
+    type_ptrs_.clear();
     types_.clear();
-    functions_.clear();
+    fns_.clear();
+    vars_.clear();
 }
 
 
@@ -85,7 +119,15 @@ void Program::dump_spirv(std::ostream& os) const
         CodeGen::gen(os, t);
     }
 
-    for (auto fn : functions_) {
+    for (auto tp: type_ptrs_) {
+        CodeGen::gen(os, tp);
+    }
+
+    for (auto v: vars_) {
+        v->dump_spirv(os);
+    }
+
+    for (auto fn : fns_) {
         fn->dump_spirv(os);
     }
 }
@@ -94,20 +136,51 @@ void Program::dump_spirv(std::ostream& os) const
 Function* Program::new_fn(uint32_t ret_type, const std::vector<uint32_t>& params)
 {
     auto fn{new Function(this, ret_type, params)};
-    functions_.push_back(fn);
+    fns_.push_back(fn);
     return fn;
 }
 
 
-Variable* Program::new_var()
+Variable* Program::new_var(uint32_t type, StorageClass sc)
 {
-    return nullptr;
+    auto tp{get_type_ptr_id(type, sc)};
+    auto v{new Variable(this, tp)};
+    vars_.push_back(v);
+    return v;
 }
 
 
 void Program::set_entry_id(uint32_t id)
 {
     entry_point_->set_entry_id(id);
+}
+
+
+uint32_t Program::get_type_ptr_id(uint32_t type_id, StorageClass sc)
+{
+    for (auto tp : type_ptrs_) {
+        if (tp->type_id == type_id && tp->storage_class == sc) {
+            return tp->id;
+        }
+    }
+
+    // create new type pointer
+    auto tp{new OpTypePointer(type_id)};
+    tp->storage_class = sc;
+    type_ptrs_.push_back(tp);
+    return tp->id;
+}
+
+
+OpTypePointer* Program::get_type_ptr(uint32_t id)
+{
+    for (auto tp : type_ptrs_) {
+        if (tp->id == id) {
+            return tp;
+        }
+    }
+
+    return nullptr;
 }
 
 

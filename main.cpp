@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -8,8 +9,10 @@ int main()
 {
     Program prog;
 
-    auto entry{prog.new_fn(prog.get_type(DType::VOID)->id, {})};
+    auto entry{prog.new_fn(prog.get_type(DType::VOID), {})};
     entry->as_entry();
+    auto float32{prog.get_type(DType::FLOAT, 32)};
+    auto var{prog.new_var(float32, StorageClass::PRIVATE)};
 
     std::cout << "Code:\n"
         << "----\n"

@@ -49,6 +49,15 @@ void CodeGen::gen(std::ostream& ss, const OpEntryPoint* op)
 }
 
 
+void CodeGen::gen(std::ostream& ss, const OpDecorate* op)
+{
+    ss << op->name() << " %" << op->target_id
+        << " " << as_string(op->dec.type)
+        << " " << op->dec.param << "\n";
+}
+
+
+
 void CodeGen::gen(std::ostream& ss, const OpFunction* op)
 {
     ss << "%" <<op->id << " = " << op->name()

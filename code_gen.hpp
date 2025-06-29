@@ -11,6 +11,7 @@ struct CodeGen
     static void gen(std::ostream& ss, const OpCapability* op);
     static void gen(std::ostream& ss, const OpMemoryModel* op);
     static void gen(std::ostream& ss, const OpEntryPoint* op);
+    static void gen(std::ostream& ss, const OpDecorate* op);
     static void gen(std::ostream& ss, const OpFunction* op);
     static void gen(std::ostream& ss, const OpLabel* op);
     static void gen(std::ostream& ss, const OpReturn* op);

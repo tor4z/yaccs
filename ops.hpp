@@ -38,6 +38,55 @@ enum class StorageClass
 }; // enum class StorageClass
 
 
+struct Decoration
+{
+    enum Type {
+        RELAXED_PRECISION = 0,
+        SPECID,
+        BLOCK,
+        BUFFER_BLOCK,
+        ROW_MAJOR,
+        COL_MAJOR,
+        ARRAY_STRIDE,
+        MATRIX_STRIDE,
+        GLSL_SHARED,
+        GLSL_PACKED,
+        CPACKED,
+        BUILTIN,
+        NO_PERSPECTIVE,
+        FLAT,
+        PATCH,
+        CENTROID,
+        SAMPLE,
+        INVARIANT,
+        RESTRICT,
+        ALIASED,
+        VOLATILE,
+        CONSTANT,
+        COHERENT,
+        NON_WRITABLE,
+        NON_READABLE,
+        UNIFORM,
+        UNIFORMID,
+        SATURATED_CONVERSION,
+        STREAM,
+        LOCATION,
+        COMPONENT,
+        INDEX,
+        BINDING,
+        DESCRIPTOR_SET,
+        OFFSET,
+        XFB_BUFFER,
+        XFB_STRIDE,
+    }; // enum Type
+
+    Decoration() {}
+    Decoration(Type t, uint32_t p) : type(t), param(p) {}
+    Type type;
+    uint32_t param;
+}; // Decoration
+
+
 struct Op
 {
     explicit Op(bool has_ret);
@@ -72,6 +121,15 @@ private:
     friend class CodeGen;
     uint32_t entry_id_;
 }; // struct OpEntryPoint
+
+
+struct OpDecorate: public Op
+{
+    OpDecorate() : Op(false) {}
+    virtual std::string_view name() const override { return "OpDecorate"; }
+    uint32_t target_id;
+    Decoration dec;
+}; // struct OpDecorate
 
 
 struct OpVariable: public Op
@@ -111,5 +169,8 @@ struct OpFunctionEnd: public Op
     OpFunctionEnd() : Op(false) {}
     virtual std::string_view name() const override { return "OpFunctionEnd"; }
 }; // struct OpFunctionEnd
+
+
+const std::string& as_string(Decoration::Type dec);
 
 #endif // YACCSS_OPS_H_

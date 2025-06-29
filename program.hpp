@@ -23,6 +23,8 @@ struct Variable: public ProgCompo
 {
     Variable(Program* prog, uint32_t type_ptr);
     ~Variable();
+
+    void decorate(Decoration dec);
 private:
     friend class Program;
     Program* prog_;
@@ -69,6 +71,7 @@ private:
     void prologue();
     void set_entry_id(uint32_t id);
     uint32_t get_type_ptr_id(uint32_t type_id, StorageClass sc);
+    uint32_t add_decoration(uint32_t var_id, const Decoration& dec);
     OpTypePointer* get_type_ptr(uint32_t id);
 
     OpCapability* capa_;
@@ -76,6 +79,7 @@ private:
     OpEntryPoint* entry_point_;
     std::vector<Function*> fns_;
     std::vector<Variable*> vars_;
+    std::vector<OpDecorate*> decs_;
     std::vector<OpTypeBase*> types_;
     std::vector<OpTypePointer*> type_ptrs_;
 }; // class Program

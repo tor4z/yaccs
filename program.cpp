@@ -23,6 +23,12 @@ Variable::~Variable()
 }
 
 
+void Variable::decorate(Decoration dec)
+{
+    prog_->add_decoration(op_var_->id, dec);
+}
+
+
 void Variable::dump_spirv(std::ostream& os) const
 {
     CodeGen::gen(os, op_var_);
@@ -94,10 +100,15 @@ Program::~Program()
         delete v;
     }
 
+    for (auto dec : decs_) {
+        delete dec;
+    }
+
     type_ptrs_.clear();
     types_.clear();
     fns_.clear();
     vars_.clear();
+    decs_.clear();
 }
 
 
@@ -114,6 +125,10 @@ void Program::dump_spirv(std::ostream& os) const
     CodeGen::gen(os, capa_);
     CodeGen::gen(os, mem_mode_);
     CodeGen::gen(os, entry_point_);
+
+    for (auto d: decs_) {
+        CodeGen::gen(os, d);
+    }
 
     for (auto t: types_) {
         CodeGen::gen(os, t);
@@ -182,6 +197,23 @@ OpTypePointer* Program::get_type_ptr(uint32_t id)
 
     return nullptr;
 }
+
+
+uint32_t Program::add_decoration(uint32_t var_id, const Decoration& dec)
+{
+    for (auto dec : decs_) {
+        if (dec->target_id == var_id) {
+            assert("Duplicate decoration");
+        }
+    }
+
+    auto d{new OpDecorate()};
+    d->target_id = var_id;
+    d->dec = dec;
+    decs_.push_back(d);
+    return d->id;
+}
+
 
 
 std::ostream& operator<<(std::ostream& os, const Program& prag)

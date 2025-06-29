@@ -58,6 +58,8 @@ struct OpFunction: public Op
 {
     OpFunction() : Op(true) {}
     virtual std::string_view name() const override { return "OpFunction"; }
+    uint32_t type_id;
+    uint32_t ret_type_id;
 }; // struct OpFunction
 
 

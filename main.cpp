@@ -8,7 +8,7 @@ int main()
 {
     Program prog;
 
-    auto entry{prog.new_fn()};
+    auto entry{prog.new_fn(prog.get_type(DType::VOID)->id, {})};
     entry->as_entry();
 
     std::cout << "Code:\n"

@@ -7,12 +7,18 @@
 #include <utility>
 
 
-Function::Function(Program* prog)
+Function::Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>& params)
     : prog_(prog)
     , op_fn_(new OpFunction())
+    , op_lab_(new OpLabel())
+    , op_ret_(new OpReturn())
     , op_fend_(new OpFunctionEnd())
+    , ret_type_(ret_type)
+    , params_(params)
 {
-    set_ret_type(DType::VOID); // default return type
+    auto op_fn_type{prog_->get_type(DType::FN, ret_type)};
+    op_fn_->type_id = op_fn_type->id;
+    op_fn_->ret_type_id = ret_type;
 }
 
 
@@ -24,19 +30,17 @@ Variable* Function::new_var()
 
 void Function::as_entry()
 {
-    prog_->set_entry_id(op_fn_->id);   
-    set_ret_type(DType::VOID);
-}
-
-
-void Function::set_ret_type(DType dt)
-{
-    op_ret_type_ = prog_->get_type(dt);
+    // TODO return void
+    prog_->set_entry_id(op_fn_->id);
 }
 
 
 void Function::dump_spirv(std::ostream& os) const
 {
+    CodeGen::gen(os, op_fn_);
+    CodeGen::gen(os, op_lab_);
+    CodeGen::gen(os, op_ret_);
+    CodeGen::gen(os, op_fend_);
 }
 
 
@@ -51,6 +55,15 @@ Program::~Program()
     delete capa_;
     delete mem_mode_;
     delete entry_point_;
+    for (auto t : types_) {
+        delete t;
+    }
+    for (auto f : functions_) {
+        delete f;
+    }
+
+    types_.clear();
+    functions_.clear();
 }
 
 
@@ -78,9 +91,9 @@ void Program::dump_spirv(std::ostream& os) const
 }
 
 
-Function* Program::new_fn()
+Function* Program::new_fn(uint32_t ret_type, const std::vector<uint32_t>& params)
 {
-    auto fn{new Function(this)};
+    auto fn{new Function(this, ret_type, params)};
     functions_.push_back(fn);
     return fn;
 }

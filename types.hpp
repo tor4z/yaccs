@@ -14,6 +14,7 @@ struct OpTypeBase: public Op
     virtual std::string_view name() const = 0;
     const DType dt;
     uint32_t ret_type_id;
+    std::vector<uint32_t> param_type_ids;
 }; // strut OpTypeBase
 
 
@@ -46,7 +47,8 @@ struct OpTypeCreator
 {
     explicit OpTypeCreator(std::vector<OpTypeBase*>& types) : types_(types) {}
     OpTypeBase* get_type();
-    OpTypeBase* get_type(uint32_t id);
+    OpTypeBase* get_type(uint32_t ret_type_id);
+    OpTypeBase* get_type(uint32_t ret_type_id, const std::vector<uint32_t>& param_type_ids);
 private:
     std::vector<OpTypeBase*>& types_;
 }; // struct OpTypeCreator
@@ -68,16 +70,35 @@ OpTypeBase* OpTypeCreator<DT>::get_type()
 
 
 template<DType DT>
-OpTypeBase* OpTypeCreator<DT>::get_type(uint32_t id)
+OpTypeBase* OpTypeCreator<DT>::get_type(uint32_t ret_type_id)
 {
     for (auto t : types_) {
-        if (t->dt == DT && id == t->ret_type_id) {
+        if (t->dt == DT && ret_type_id == t->ret_type_id) {
             return t;
         }
     }
 
     auto t{new OpType<DT>()};
-    t.ret_type_id = id;
+    t->ret_type_id = ret_type_id;
+    types_.push_back(t);
+    return t;
+}
+
+
+template<DType DT>
+OpTypeBase* OpTypeCreator<DT>::get_type(uint32_t ret_type_id,
+    const std::vector<uint32_t>& param_type_ids)
+{
+    for (auto t : types_) {
+        if (t->dt == DT && ret_type_id == t->ret_type_id &&
+            param_type_ids == t->param_type_ids) {
+            return t;
+        }
+    }
+
+    auto t{new OpType<DT>()};
+    t->ret_type_id = ret_type_id;
+    t->param_type_ids = param_type_ids;
     types_.push_back(t);
     return t;
 }

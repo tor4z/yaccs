@@ -31,19 +31,19 @@ struct Function: public ProgCompo
 {
     Variable* new_var();
     void as_entry();
-    void set_ret_type(DType dt);
 private:
     friend class Program;
     OpFunction* op_fn_;
     OpLabel* op_lab_;
     OpReturn* op_ret_;
     OpFunctionEnd* op_fend_;
-
-    OpTypeBase* op_ret_type_;
     Program* prog_;
 
+    uint32_t ret_type_;
+    std::vector<uint32_t> params_;
+
     virtual void dump_spirv(std::ostream& os) const override;
-    explicit Function(Program* prog);
+    explicit Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>& params);
 }; // class Function
 
 
@@ -51,7 +51,7 @@ struct Program: public ProgCompo
 {
     Program();
     ~Program();
-    Function* new_fn();
+    Function* new_fn(uint32_t ret_type, const std::vector<uint32_t>& params);
     Variable* new_var();
     template<typename ...Args>
     OpTypeBase* get_type(DType dt, Args&& ...args);

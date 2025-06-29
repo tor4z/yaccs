@@ -15,7 +15,8 @@ void dt_gen<DType::VOID>(std::ostream& ss, const OpType<DType::VOID>* op)
 template<>
 void dt_gen<DType::FN>(std::ostream& ss, const OpType<DType::FN>* op)
 {
-    ss << "%" << op->id << " = " << op->name() << "\n";
+    ss << "%" << op->id << " = "
+        << op->name() << " %" << op->ret_type_id << "\n";
 }
 
 
@@ -39,11 +40,20 @@ void CodeGen::gen(std::ostream& ss, const OpEntryPoint* op)
 
 void CodeGen::gen(std::ostream& ss, const OpFunction* op)
 {
-    ss << op->name() << "\n";
+    ss << "%" <<op->id << " = " << op->name()
+        << " %" << op->ret_type_id
+        << " None"
+        << " %" << op->type_id << "\n";
 }
 
 
 void CodeGen::gen(std::ostream& ss, const OpLabel* op)
+{
+    ss << "%" <<op->id << " = " << op->name() << "\n";
+}
+
+
+void CodeGen::gen(std::ostream& ss, const OpReturn* op)
 {
     ss << op->name() << "\n";
 }

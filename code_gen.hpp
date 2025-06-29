@@ -13,6 +13,7 @@ struct CodeGen
     static void gen(std::ostream& ss, const OpEntryPoint* op);
     static void gen(std::ostream& ss, const OpFunction* op);
     static void gen(std::ostream& ss, const OpLabel* op);
+    static void gen(std::ostream& ss, const OpReturn* op);
     static void gen(std::ostream& ss, const OpFunctionEnd* op);
     static void gen(std::ostream& ss, const OpTypeBase* op);
 }; // class CodeGen

@@ -1,75 +1,84 @@
 #ifndef YACCSS_OPS_H_
 #define YACCSS_OPS_H_
 
+#include <cstdint>
 #include <string>
+#include <string_view>
 
-namespace yaccs {
+struct Program;
+struct CodeGen;
+
+enum class DType
+{
+    INVALID = 0,
+    FN,
+    VOID,
+    FLOAT,
+    INT,
+}; // enum class DType
+
 
 struct Op
 {
-    virtual std::string str() const = 0;
+    explicit Op(bool has_ret);
+    virtual ~Op() = default;
+    virtual std::string_view name() const = 0;
+    const uint32_t id;
+    const bool has_ret;
+private:
 }; // strut Op
-
-
-struct OpType: public Op
-{
-    virtual std::string str() const = 0;
-}; // strut OpType
 
 
 struct OpCapability: public Op
 {
-    virtual std::string str() const override;
+    OpCapability() : Op(false) {}
+    virtual std::string_view name() const override { return "OpCapability"; }
 }; // struct OpCapability
 
 
 struct OpMemoryModel: public Op
 {
-    virtual std::string str() const override;
+    OpMemoryModel() : Op(false) {}
+    virtual std::string_view name() const override { return "OpMemoryModel"; }
 }; // struct OpMemoryModel
 
 
 struct OpEntryPoint: public Op
 {
-    virtual std::string str() const override;
+    OpEntryPoint() : Op(false) {}
+    virtual std::string_view name() const override { return "OpEntryPoint"; }
+    void set_entry_id(uint32_t entry_id) { entry_id_ = entry_id; }
+private:
+    friend class CodeGen;
+    uint32_t entry_id_;
 }; // struct OpEntryPoint
-
-
-struct OpTypeVoid: public OpType
-{
-    virtual std::string str() const override;
-}; // struct OpTypeVoid
-
-
-struct OpTypeFunction: public OpType
-{
-    virtual std::string str() const override;
-}; // struct OpTypeFunction
 
 
 struct OpFunction: public Op
 {
-    virtual std::string str() const override;
+    OpFunction() : Op(true) {}
+    virtual std::string_view name() const override { return "OpFunction"; }
 }; // struct OpFunction
 
 
 struct OpLabel: public Op
 {
-    virtual std::string str() const override;
+    OpLabel() : Op(true) {}
+    virtual std::string_view name() const override { return "OpLabel"; }
 }; // struct OpLabel
 
 
 struct OpReturn: public Op
 {
-    virtual std::string str() const override;
+    OpReturn() : Op(false) {}
+    virtual std::string_view name() const override { return "OpReturn"; }
 }; // struct OpReturn
 
 
 struct OpFunctionEnd: public Op
 {
-    virtual std::string str() const override;
+    OpFunctionEnd() : Op(false) {}
+    virtual std::string_view name() const override { return "OpFunctionEnd"; }
 }; // struct OpFunctionEnd
-
-} // yaccs
 
 #endif // YACCSS_OPS_H_

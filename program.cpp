@@ -1,6 +1,7 @@
 #include "program.hpp"
 #include "code_gen.hpp"
 #include "ops.hpp"
+#include "utils.hpp"
 #include <sstream>
 #include <cassert>
 #include <string>
@@ -45,8 +46,7 @@ Function::Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>
     , ret_type_(ret_type)
     , params_(params)
 {
-    auto op_fn_type{prog_->get_type(DType::FN, ret_type)};
-    op_fn_->type_id = op_fn_type;
+    op_fn_->type_id = prog_->get_type(DType::FN, ret_type);
     op_fn_->ret_type_id = ret_type;
 }
 
@@ -59,7 +59,8 @@ Variable* Function::new_var()
 
 void Function::as_entry()
 {
-    // TODO return void
+    assert(prog_->get_op_type(op_fn_->ret_type_id)->dt == DType::VOID &&
+        "Entry function should be void");
     prog_->set_entry_id(op_fn_->id);
 }
 
@@ -184,6 +185,17 @@ uint32_t Program::get_type_ptr_id(uint32_t type_id, StorageClass sc)
     tp->storage_class = sc;
     type_ptrs_.push_back(tp);
     return tp->id;
+}
+
+
+OpTypeBase* Program::get_op_type(uint32_t type_id)
+{
+    for (auto t: types_) {
+        if (t->id == type_id) {
+            return t;
+        }
+    }
+    return nullptr;
 }
 
 

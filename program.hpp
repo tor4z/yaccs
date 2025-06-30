@@ -70,6 +70,7 @@ private:
     virtual void dump_spirv(std::ostream& os) const override;
     void prologue();
     void set_entry_id(uint32_t id);
+    OpTypeBase* get_op_type(uint32_t type_id);
     uint32_t get_type_ptr_id(uint32_t type_id, StorageClass sc);
     uint32_t add_decoration(uint32_t var_id, const Decoration& dec);
     OpTypePointer* get_type_ptr(uint32_t id);

@@ -11,8 +11,7 @@
 
 struct OpTypeBase: public Op
 {
-    explicit OpTypeBase(DType t) : Op(true), dt(t) {}
-    virtual std::string_view name() const = 0;
+    explicit OpTypeBase(Op::Type op_type, DType t) : Op(op_type, true), dt(t) {}
 
     const DType dt;
     uint32_t ret_type_id;
@@ -23,8 +22,7 @@ struct OpTypeBase: public Op
 
 struct OpTypePointer: public Op
 {
-    explicit OpTypePointer(uint32_t type_id) : Op(true), type_id(type_id) {}
-    std::string_view name() const { return "OpTypePointer"; };
+    explicit OpTypePointer(uint32_t type_id) : Op(Op::TYPE_POINTER, true), type_id(type_id) {}
     uint32_t type_id;
     StorageClass storage_class;
 }; // strut OpTypePointer
@@ -33,32 +31,28 @@ struct OpTypePointer: public Op
 template<DType T>
 struct OpType: public OpTypeBase
 {
-    OpType() : OpTypeBase(DType::INVALID) {}
-    virtual std::string_view name() const override { assert("Try to use invalid type."); }
+    OpType() : OpTypeBase(Op::INVALID, DType::INVALID) {}
 }; // struct OpType
 
 
 template<>
 struct OpType<DType::VOID>: public OpTypeBase
 {
-    OpType() : OpTypeBase(DType::VOID) {}
-    virtual std::string_view name() const override { return "OpTypeVoid"; }
+    OpType() : OpTypeBase(Op::TYPE_VOID, DType::VOID) {}
 }; // struct OpType
 
 
 template<>
 struct OpType<DType::FN>: public OpTypeBase
 {
-    OpType() : OpTypeBase(DType::FN) {}
-    virtual std::string_view name() const override { return "OpTypeFunction"; }
+    OpType() : OpTypeBase(Op::TYPE_FUNCTION, DType::FN) {}
 }; // struct OpType
 
 
 template<>
 struct OpType<DType::FLOAT>: public OpTypeBase
 {
-    OpType() : OpTypeBase(DType::FLOAT) {}
-    virtual std::string_view name() const override { return "OpTypeFloat"; }
+    OpType() : OpTypeBase(Op::TYPE_FLOAT, DType::FLOAT) {}
 }; // struct OpType
 
 

@@ -2,6 +2,7 @@
 #include "code_gen.hpp"
 #include "ops.hpp"
 #include "utils.hpp"
+#include <cstdint>
 #include <sstream>
 #include <cassert>
 #include <string>
@@ -30,6 +31,18 @@ void Variable::decorate(Decoration dec)
 }
 
 
+uint32_t Variable::id()
+{
+    return op_var_->id;
+}
+
+
+uint32_t Variable::type()
+{
+    return prog_->get_type_ptr(op_var_->type_ptr_id)->type_id;
+}
+
+
 void Variable::dump_spirv(std::ostream& os) const
 {
     CodeGen::gen(os, op_var_);
@@ -51,6 +64,21 @@ Function::Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>
 }
 
 
+Function::~Function()
+{
+    delete op_fn_;
+    delete op_lab_;
+    delete op_ret_;
+    delete op_fend_;
+
+    for (auto op: ops_) {
+        delete op;
+    }
+
+    ops_.clear();
+}
+
+
 Variable* Function::new_var()
 {
     return nullptr;
@@ -61,7 +89,23 @@ void Function::as_entry()
 {
     assert(prog_->get_op_type(op_fn_->ret_type_id)->dt == DType::VOID &&
         "Entry function should be void");
-    prog_->set_entry_id(op_fn_->id);
+    prog_->set_entry_id(op_fn_->id, params_);
+}
+
+
+void Function::op_assign(Variable* from, Variable* to)
+{
+    auto op_load{new OpLoad()};
+    auto op_store{new OpStore()};
+
+    op_load->var_id = from->id();
+    op_load->type_id = from->type();
+
+    op_store->src_id = op_load->id;
+    op_store->dst_id = to->id();
+
+    ops_.push_back(op_load);
+    ops_.push_back(op_store);
 }
 
 
@@ -69,6 +113,11 @@ void Function::dump_spirv(std::ostream& os) const
 {
     CodeGen::gen(os, op_fn_);
     CodeGen::gen(os, op_lab_);
+
+    for (auto op: ops_) {
+        CodeGen::gen(os, op);
+    }
+
     CodeGen::gen(os, op_ret_);
     CodeGen::gen(os, op_fend_);
 }
@@ -166,9 +215,10 @@ Variable* Program::new_var(uint32_t type, StorageClass sc)
 }
 
 
-void Program::set_entry_id(uint32_t id)
+void Program::set_entry_id(uint32_t id, const std::vector<uint32_t>& params)
 {
-    entry_point_->set_entry_id(id);
+    entry_point_->entry_id = id;
+    entry_point_->params = params;
 }
 
 

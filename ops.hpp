@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 struct Program;
 struct CodeGen;
@@ -86,47 +87,58 @@ struct Decoration
     uint32_t param;
 }; // Decoration
 
-
 struct Op
 {
-    explicit Op(bool has_ret);
+    enum Type {
+        INVALID = 0,
+        CAPABILITY,
+        MEMORY_MODEL,
+        ENTRY_POINT,
+        DECORATE,
+        VARIABLE,
+        FUNCTION,
+        LOAD,
+        STORE,
+        LABEL,
+        RETURN,
+        FUNCTION_END,
+        TYPE_POINTER,
+        TYPE_VOID,
+        TYPE_FUNCTION,
+        TYPE_FLOAT,
+    }; // enum Type
+
+    Op(Type op_type, bool has_ret);
     virtual ~Op() = default;
-    virtual std::string_view name() const = 0;
     const uint32_t id;
     const bool has_ret;
-private:
+    const Type type;
 }; // strut Op
 
 
 struct OpCapability: public Op
 {
-    OpCapability() : Op(false) {}
-    virtual std::string_view name() const override { return "OpCapability"; }
+    OpCapability() : Op(Op::CAPABILITY, false) {}
 }; // struct OpCapability
 
 
 struct OpMemoryModel: public Op
 {
-    OpMemoryModel() : Op(false) {}
-    virtual std::string_view name() const override { return "OpMemoryModel"; }
+    OpMemoryModel() : Op(Op::MEMORY_MODEL, false) {}
 }; // struct OpMemoryModel
 
 
 struct OpEntryPoint: public Op
 {
-    OpEntryPoint() : Op(false) {}
-    virtual std::string_view name() const override { return "OpEntryPoint"; }
-    void set_entry_id(uint32_t entry_id) { entry_id_ = entry_id; }
-private:
-    friend class CodeGen;
-    uint32_t entry_id_;
+    OpEntryPoint() : Op(Op::ENTRY_POINT, false) {}
+    uint32_t entry_id;
+    std::vector<uint32_t> params;
 }; // struct OpEntryPoint
 
 
 struct OpDecorate: public Op
 {
-    OpDecorate() : Op(false) {}
-    virtual std::string_view name() const override { return "OpDecorate"; }
+    OpDecorate() : Op(Op::DECORATE, false) {}
     uint32_t target_id;
     Decoration dec;
 }; // struct OpDecorate
@@ -134,8 +146,7 @@ struct OpDecorate: public Op
 
 struct OpVariable: public Op
 {
-    OpVariable() : Op(true) {}
-    virtual std::string_view name() const override { return "OpVariable"; }
+    OpVariable() : Op(Op::VARIABLE, true) {}
     uint32_t type_ptr_id;
     StorageClass storage_class;
 }; // struct OpVariable
@@ -143,34 +154,47 @@ struct OpVariable: public Op
 
 struct OpFunction: public Op
 {
-    OpFunction() : Op(true) {}
-    virtual std::string_view name() const override { return "OpFunction"; }
+    OpFunction() : Op(Op::FUNCTION, true) {}
     uint32_t type_id;
     uint32_t ret_type_id;
 }; // struct OpFunction
 
 
+struct OpLoad: public Op
+{
+    OpLoad() : Op(Op::LOAD, true) {}
+    uint32_t type_id;
+    uint32_t var_id;
+}; // struct OpLoad
+
+
+struct OpStore: public Op
+{
+    OpStore() : Op(Op::STORE, false) {}
+    uint32_t src_id;
+    uint32_t dst_id;
+}; // struct OpStore
+
+
 struct OpLabel: public Op
 {
-    OpLabel() : Op(true) {}
-    virtual std::string_view name() const override { return "OpLabel"; }
+    OpLabel() : Op(Op::LABEL, true) {}
 }; // struct OpLabel
 
 
 struct OpReturn: public Op
 {
-    OpReturn() : Op(false) {}
-    virtual std::string_view name() const override { return "OpReturn"; }
+    OpReturn() : Op(Op::RETURN, false) {}
 }; // struct OpReturn
 
 
 struct OpFunctionEnd: public Op
 {
-    OpFunctionEnd() : Op(false) {}
-    virtual std::string_view name() const override { return "OpFunctionEnd"; }
+    OpFunctionEnd() : Op(Op::FUNCTION_END, false) {}
 }; // struct OpFunctionEnd
 
 
 const std::string& as_string(Decoration::Type dec);
+const std::string& as_string(Op::Type op_type);
 
 #endif // YACCSS_OPS_H_

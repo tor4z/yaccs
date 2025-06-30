@@ -25,6 +25,8 @@ struct Variable: public ProgCompo
     ~Variable();
 
     void decorate(Decoration dec);
+    uint32_t id();
+    uint32_t type();
 private:
     friend class Program;
     Program* prog_;
@@ -36,8 +38,10 @@ private:
 
 struct Function: public ProgCompo
 {
+    ~Function();
     Variable* new_var();
     void as_entry();
+    void op_assign(Variable* from, Variable* to);
 private:
     friend class Program;
     OpFunction* op_fn_;
@@ -48,6 +52,7 @@ private:
 
     uint32_t ret_type_;
     std::vector<uint32_t> params_;
+    std::vector<Op*> ops_;
 
     virtual void dump_spirv(std::ostream& os) const override;
     explicit Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>& params);
@@ -69,7 +74,7 @@ private:
 
     virtual void dump_spirv(std::ostream& os) const override;
     void prologue();
-    void set_entry_id(uint32_t id);
+    void set_entry_id(uint32_t id, const std::vector<uint32_t>& params);
     OpTypeBase* get_op_type(uint32_t type_id);
     uint32_t get_type_ptr_id(uint32_t type_id, StorageClass sc);
     uint32_t add_decoration(uint32_t var_id, const Decoration& dec);

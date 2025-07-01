@@ -121,10 +121,14 @@ const std::string& as_string(Op::Type op_type)
     static const std::string op_label{"OpLabel"};
     static const std::string op_return{"OpReturn"};
     static const std::string op_function_end{"OpFunctionEnd"};
+    static const std::string op_constant{"OpConstant"};
+    static const std::string op_constant_composite{"OpConstantComposite"};
+
     static const std::string op_type_pointer{"OpTypePointer"};
     static const std::string op_type_void{"OpTypeVoid"};
     static const std::string op_type_function{"OpTypeFunction"};
     static const std::string op_type_float{"OpTypeFloat"};
+    static const std::string op_type_vector{"OpTypeVector"};
 
     switch (op_type) {
     case Op::INVALID: return op_invalid;
@@ -139,10 +143,14 @@ const std::string& as_string(Op::Type op_type)
     case Op::LABEL: return op_label;
     case Op::RETURN: return op_return;
     case Op::FUNCTION_END: return op_function_end;
+    case Op::CONSTANT: return op_constant;
+    case Op::CONSTANT_COMPOSITE: return op_constant_composite;
+
     case Op::TYPE_POINTER: return op_type_pointer;
     case Op::TYPE_VOID: return op_type_void;
     case Op::TYPE_FUNCTION: return op_type_function;
     case Op::TYPE_FLOAT: return op_type_float;
+    case Op::TYPE_VECTOR: return op_type_vector;
     }
     return op_invalid;
 }

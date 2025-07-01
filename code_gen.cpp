@@ -23,11 +23,21 @@ void dt_gen<DType::FN>(std::ostream& ss, const OpType<DType::FN>* op)
         << as_string(op->type) << " %" << op->ret_type_id << "\n";
 }
 
+
 template<>
 void dt_gen<DType::FLOAT>(std::ostream& ss, const OpType<DType::FLOAT>* op)
 {
     ss << "%" << op->id << " = "
         << as_string(op->type) << " " << op->width << "\n";
+}
+
+
+template<>
+void dt_gen<DType::VEC>(std::ostream& ss, const OpType<DType::VEC>* op)
+{
+    ss << "%" << op->id << " = "
+        << as_string(op->type) << " %" << op->comp_type
+        << " " << op->comp_count << "\n";
 }
 
 
@@ -123,6 +133,19 @@ void CodeGen::gen(std::ostream& ss, const OpVariable* op)
 }
 
 
+void CodeGen::gen(std::ostream& ss, const OpConstantComposite* op)
+{
+    ss << "%" << op->id << " = " << as_string(op->type)
+        << " %" << op->type_id;
+    
+    for (auto c : op->comps) {
+        ss << " %" << c;
+    }
+
+    ss << "\n";
+}
+
+
 void CodeGen::gen(std::ostream& ss, const Op* op)
 {
     switch (op->type) {
@@ -142,6 +165,7 @@ void CodeGen::gen(std::ostream& ss, const Op* op)
         case Op::TYPE_FUNCTION: return dt_gen<DType::FN>(ss, reinterpret_cast<const OpType<DType::FN>*>(op));
         case Op::TYPE_VOID:     return dt_gen<DType::VOID>(ss, reinterpret_cast<const OpType<DType::VOID>*>(op));
         case Op::TYPE_FLOAT:    return dt_gen<DType::FLOAT>(ss, reinterpret_cast<const OpType<DType::FLOAT>*>(op));
+        case Op::TYPE_VECTOR:   return dt_gen<DType::VEC>(ss, reinterpret_cast<const OpType<DType::VEC>*>(op));
         case Op::INVALID:
         default:                assert("TODO!");
     }

@@ -49,7 +49,6 @@ void Variable::dump_spirv(std::ostream& os) const
 }
 
 
-
 Function::Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>& params)
     : prog_(prog)
     , op_fn_(new OpFunction())
@@ -154,11 +153,21 @@ Program::~Program()
         delete dec;
     }
 
+    for (auto c : consts_) {
+        delete c;
+    }
+
+    for (auto cc : const_comps_) {
+        delete cc;
+    }
+
     type_ptrs_.clear();
     types_.clear();
     fns_.clear();
     vars_.clear();
     decs_.clear();
+    consts_.clear();
+    const_comps_.clear();
 }
 
 
@@ -190,6 +199,14 @@ void Program::dump_spirv(std::ostream& os) const
 
     for (auto v: vars_) {
         v->dump_spirv(os);
+    }
+
+    for (auto c: consts_) {
+        c->dump_spirv(os);
+    }
+
+    for (auto cc: const_comps_) {
+        cc->dump_spirv(os);
     }
 
     for (auto fn : fns_) {

@@ -16,6 +16,8 @@ struct OpTypeBase: public Op
     const DType dt;
     uint32_t ret_type_id;
     uint32_t width;
+    uint32_t comp_type;
+    uint32_t comp_count;
     std::vector<uint32_t> param_type_ids;
 }; // strut OpTypeBase
 
@@ -56,6 +58,13 @@ struct OpType<DType::FLOAT>: public OpTypeBase
 }; // struct OpType
 
 
+template<>
+struct OpType<DType::VEC>: public OpTypeBase
+{
+    OpType() : OpTypeBase(Op::TYPE_VECTOR, DType::VEC) {}
+}; // struct OpType
+
+
 template<DType DT>
 struct OpTypeCreator
 {
@@ -73,6 +82,7 @@ struct OpTypeCreator
         return t;    
     }
     OpTypeBase* get_type(uint32_t u32) { return nullptr; }
+    OpTypeBase* get_type(uint32_t u32_1, uint32_t u32_2) { return nullptr; }
     OpTypeBase* get_type(uint32_t u32, const std::vector<uint32_t>& u32s) { return nullptr; }
 private:
     std::vector<OpTypeBase*>& types_;
@@ -94,6 +104,34 @@ struct OpTypeCreator<DType::FLOAT>
 
         auto t{new OpType<DType::FLOAT>()};
         t->width = u32;
+        types_.push_back(t);
+        return t;
+    }
+    OpTypeBase* get_type(uint32_t u32_1, uint32_t u32_2) { return nullptr; }
+    OpTypeBase* get_type(uint32_t u32, const std::vector<uint32_t>& u32s) { return nullptr; }
+private:
+    std::vector<OpTypeBase*>& types_;
+}; // struct OpTypeCreator
+
+
+template<>
+struct OpTypeCreator<DType::VEC>
+{
+    explicit OpTypeCreator(std::vector<OpTypeBase*>& types) : types_(types) {}
+    OpTypeBase* get_type() { return nullptr; }
+    OpTypeBase* get_type(uint32_t u32) { return nullptr; }
+    OpTypeBase* get_type(uint32_t comp_type, uint32_t comp_count)
+    {
+        for (auto t : types_) {
+            if (t->dt == DType::VEC && t->comp_type == comp_type &&
+                t->comp_count == comp_count) {
+                return t;
+            }
+        }
+
+        auto t{new OpType<DType::VEC>()};
+        t->comp_type = comp_type;
+        t->comp_count = comp_count;
         types_.push_back(t);
         return t;
     }
@@ -121,6 +159,7 @@ struct OpTypeCreator<DType::FN>
         types_.push_back(t);
         return t;    
     }
+    OpTypeBase* get_type(uint32_t u32_1, uint32_t u32_2) { return nullptr; }
     OpTypeBase* get_type(uint32_t u32, const std::vector<uint32_t>& u32s) { return nullptr; }
 private:
     std::vector<OpTypeBase*>& types_;

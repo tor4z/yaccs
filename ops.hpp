@@ -15,6 +15,7 @@ enum class DType
     FN,
     VOID,
     FLOAT,
+    VEC,
     INT,
 }; // enum class DType
 
@@ -102,10 +103,14 @@ struct Op
         LABEL,
         RETURN,
         FUNCTION_END,
+        CONSTANT,
+        CONSTANT_COMPOSITE,
+
         TYPE_POINTER,
         TYPE_VOID,
         TYPE_FUNCTION,
         TYPE_FLOAT,
+        TYPE_VECTOR,
     }; // enum Type
 
     Op(Type op_type, bool has_ret);
@@ -192,6 +197,24 @@ struct OpFunctionEnd: public Op
 {
     OpFunctionEnd() : Op(Op::FUNCTION_END, false) {}
 }; // struct OpFunctionEnd
+
+
+template<typename T>
+struct OpConstant: public Op
+{
+    OpConstant() : Op(Op::CONSTANT, true) {}
+    uint32_t type_id;
+    T value;    /// TODO: support other type
+}; // struct OpConstant
+
+
+struct OpConstantComposite: public Op
+{
+    OpConstantComposite() : Op(Op::CONSTANT_COMPOSITE, true) {}
+    uint32_t type_id;
+    std::vector<uint32_t> comps;
+}; // struct OpConstantComposite
+
 
 
 const std::string& as_string(Decoration::Type dec);

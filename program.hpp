@@ -40,14 +40,21 @@ private:
 }; // struct Variable
 
 
+struct ConstValue : public ProgCompo
+{
+    virtual uint32_t id() = 0;
+    virtual uint32_t type() = 0;
+}; // struct ConstValue
+
+
 template<typename T>
-struct Constant: public ProgCompo
+struct Constant: public ConstValue
 {
     Constant(Program* prog, uint32_t type, T value);
     virtual ~Constant() override;
 
-    uint32_t id();
-    uint32_t type();
+    virtual uint32_t id() override;
+    virtual uint32_t type() override;
 private:
     friend class Program;
     friend class ConstantComposite<T>;
@@ -59,13 +66,13 @@ private:
 
 
 template<typename T>
-struct ConstantComposite: public ProgCompo
+struct ConstantComposite: public ConstValue
 {
     ConstantComposite(Program* prog, uint32_t type, const std::vector<T>& values);
     virtual ~ConstantComposite() override;
 
-    uint32_t id();
-    uint32_t type();
+    virtual uint32_t id() override;
+    virtual uint32_t type() override;
 private:
     friend class Program;
     Program* prog_;
@@ -81,7 +88,8 @@ struct Function: public ProgCompo
     virtual ~Function() override;
     Variable* new_var();
     void as_entry();
-    void op_assign(Variable* from, Variable* to);
+    void op_assign(Variable* to, Variable* from);
+    void op_assign(Variable* to, ConstValue* from);
 private:
     friend class Program;
     OpFunction* op_fn_;
@@ -94,6 +102,7 @@ private:
     std::vector<uint32_t> params_;
     std::vector<Op*> ops_;
 
+    uint32_t load(Variable* var);
     virtual void dump_spirv(std::ostream& os) const override;
     explicit Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>& params);
 }; // class Function

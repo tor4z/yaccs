@@ -24,10 +24,11 @@ int main()
     auto out_vec{prog.new_var(vec4, StorageClass::OUTPUT)};
     out_vec->decorate(Decoration(Decoration::LOCATION, 2));
 
-    auto entry{prog.new_fn(prog.get_type(DType::VOID), {in_var->id(), out_var->id()})};
+    auto entry{prog.new_fn(prog.get_type(DType::VOID), {in_var->id(), out_var->id(), out_vec->id()})};
     entry->as_entry();
 
-    entry->op_assign(in_var, out_var);
+    entry->op_assign(out_var, in_var);
+    entry->op_assign(out_vec, constant_vec4);
 
     std::cout << "Code:\n"
         << "----\n"

@@ -92,19 +92,39 @@ void Function::as_entry()
 }
 
 
-void Function::op_assign(Variable* from, Variable* to)
+void Function::op_assign(Variable* to, Variable* from)
 {
-    auto op_load{new OpLoad()};
     auto op_store{new OpStore()};
 
-    op_load->var_id = from->id();
-    op_load->type_id = from->type();
-
-    op_store->src_id = op_load->id;
+    op_store->src_id = load(from);
     op_store->dst_id = to->id();
-
-    ops_.push_back(op_load);
     ops_.push_back(op_store);
+}
+
+
+void Function::op_assign(Variable* to, ConstValue* from)
+{
+    auto op_store{new OpStore()};
+
+    op_store->src_id = from->id();
+    op_store->dst_id = to->id();
+    ops_.push_back(op_store);
+}
+
+
+uint32_t Function::load(Variable* var)
+{
+    for (auto op: ops_) {
+        if (op->type == Op::LOAD && reinterpret_cast<OpLoad*>(op)->var_id == var->id()) {
+            return op->id;
+        }
+    }
+
+    auto op_load{new OpLoad()};
+    op_load->var_id = var->id();
+    op_load->type_id = var->type();
+    ops_.push_back(op_load);
+    return op_load->id;
 }
 
 

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
 #include "program.hpp"
 
 
@@ -11,6 +12,7 @@ int main()
 
     auto float32{prog.get_type(DType::FLOAT, 32)};
     auto vec4{prog.get_type(DType::VEC, float32, 4)};
+    auto obj_prop{prog.get_type(DType::STRUCT, std::vector<uint32_t>{vec4, vec4})};
 
     // auto constant{prog.new_const(float32, 1.0f)};
     auto constant_vec4{prog.new_const(vec4, std::vector<float>{1.0f, 2.0f, 3.0f, 4.0f})};

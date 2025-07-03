@@ -41,6 +41,17 @@ void dt_gen<DType::VEC>(std::ostream& ss, const OpType<DType::VEC>* op)
 }
 
 
+template<>
+void dt_gen<DType::STRUCT>(std::ostream& ss, const OpType<DType::STRUCT>* op)
+{
+    ss << "%" << op->id << " = " << as_string(op->type);
+    for (auto t : op->param_type_ids) {
+        ss << " %" << t;
+    }
+    ss << "\n";
+}
+
+
 void CodeGen::gen(std::ostream& ss, const OpCapability* op)
 {
     ss << as_string(op->type) << " Shader" << "\n";
@@ -148,6 +159,9 @@ void CodeGen::gen(std::ostream& ss, const OpConstantComposite* op)
 
 void CodeGen::gen(std::ostream& ss, const Op* op)
 {
+#define GEN_TYPE(OPT, DT)\
+        case OPT: return dt_gen<DT>(ss, reinterpret_cast<const OpType<DT>*>(op))
+
     switch (op->type) {
         case Op::CAPABILITY:    return gen(ss, reinterpret_cast<const OpCapability*>(op));
         case Op::MEMORY_MODEL:  return gen(ss, reinterpret_cast<const OpMemoryModel*>(op));
@@ -161,12 +175,14 @@ void CodeGen::gen(std::ostream& ss, const Op* op)
         case Op::RETURN:        return gen(ss, reinterpret_cast<const OpReturn*>(op));
         case Op::FUNCTION_END:  return gen(ss, reinterpret_cast<const OpFunctionEnd*>(op));
         case Op::TYPE_POINTER:  return gen(ss, reinterpret_cast<const OpTypePointer*>(op));
-    
-        case Op::TYPE_FUNCTION: return dt_gen<DType::FN>(ss, reinterpret_cast<const OpType<DType::FN>*>(op));
-        case Op::TYPE_VOID:     return dt_gen<DType::VOID>(ss, reinterpret_cast<const OpType<DType::VOID>*>(op));
-        case Op::TYPE_FLOAT:    return dt_gen<DType::FLOAT>(ss, reinterpret_cast<const OpType<DType::FLOAT>*>(op));
-        case Op::TYPE_VECTOR:   return dt_gen<DType::VEC>(ss, reinterpret_cast<const OpType<DType::VEC>*>(op));
+
+        GEN_TYPE(Op::TYPE_FUNCTION, DType::FN);
+        GEN_TYPE(Op::TYPE_VOID, DType::VOID);
+        GEN_TYPE(Op::TYPE_FLOAT, DType::FLOAT);
+        GEN_TYPE(Op::TYPE_VECTOR, DType::VEC);
+        GEN_TYPE(Op::TYPE_STRUCT, DType::STRUCT);
         case Op::INVALID:
         default:                assert("TODO!");
     }
+#undef GEN_TYPE
 }

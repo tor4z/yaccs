@@ -27,13 +27,13 @@ Variable::~Variable()
 
 void Variable::decorate(Decoration dec)
 {
-    prog_->add_decoration(op_var_->id, dec);
+    prog_->add_decoration(op_var_->id(), dec);
 }
 
 
 uint32_t Variable::id()
 {
-    return op_var_->id;
+    return op_var_->id();
 }
 
 
@@ -43,7 +43,7 @@ uint32_t Variable::type()
 }
 
 
-void Variable::dump_spirv(std::ostream& os) const
+void Variable::dump(std::ostream& os) const
 {
     CodeGen::gen(os, op_var_);
 }
@@ -86,9 +86,9 @@ Variable* Function::new_var()
 
 void Function::as_entry()
 {
-    assert(prog_->get_op_type(op_fn_->ret_type_id)->dt == DType::VOID &&
+    assert(prog_->get_op_type(op_fn_->ret_type_id)->type()->dt == DType::VOID &&
         "Entry function should be void");
-    prog_->set_entry_id(op_fn_->id, params_);
+    prog_->set_entry_id(op_fn_->id(), params_);
 }
 
 
@@ -116,7 +116,7 @@ uint32_t Function::load(Variable* var)
 {
     for (auto op: ops_) {
         if (op->type == Op::LOAD && reinterpret_cast<OpLoad*>(op)->var_id == var->id()) {
-            return op->id;
+            return op->id();
         }
     }
 
@@ -124,11 +124,11 @@ uint32_t Function::load(Variable* var)
     op_load->var_id = var->id();
     op_load->type_id = var->type();
     ops_.push_back(op_load);
-    return op_load->id;
+    return op_load->id();
 }
 
 
-void Function::dump_spirv(std::ostream& os) const
+void Function::dump(std::ostream& os) const
 {
     CodeGen::gen(os, op_fn_);
     CodeGen::gen(os, op_lab_);
@@ -199,7 +199,7 @@ void Program::prologue()
 }
 
 
-void Program::dump_spirv(std::ostream& os) const
+void Program::dump(std::ostream& os) const
 {
     CodeGen::gen(os, capa_);
     CodeGen::gen(os, mem_mode_);
@@ -210,7 +210,7 @@ void Program::dump_spirv(std::ostream& os) const
     }
 
     for (auto t: types_) {
-        CodeGen::gen(os, t);
+        t->dump(os);
     }
 
     for (auto tp: type_ptrs_) {
@@ -218,19 +218,19 @@ void Program::dump_spirv(std::ostream& os) const
     }
 
     for (auto v: vars_) {
-        v->dump_spirv(os);
+        v->dump(os);
     }
 
     for (auto c: consts_) {
-        c->dump_spirv(os);
+        c->dump(os);
     }
 
     for (auto cc: const_comps_) {
-        cc->dump_spirv(os);
+        cc->dump(os);
     }
 
     for (auto fn : fns_) {
-        fn->dump_spirv(os);
+        fn->dump(os);
     }
 }
 
@@ -263,7 +263,7 @@ uint32_t Program::get_type_ptr_id(uint32_t type_id, StorageClass sc)
 {
     for (auto tp : type_ptrs_) {
         if (tp->type_id == type_id && tp->storage_class == sc) {
-            return tp->id;
+            return tp->id();
         }
     }
 
@@ -271,14 +271,14 @@ uint32_t Program::get_type_ptr_id(uint32_t type_id, StorageClass sc)
     auto tp{new OpTypePointer(type_id)};
     tp->storage_class = sc;
     type_ptrs_.push_back(tp);
-    return tp->id;
+    return tp->id();
 }
 
 
-OpTypeBase* Program::get_op_type(uint32_t type_id)
+Type* Program::get_op_type(uint32_t type_id)
 {
     for (auto t: types_) {
-        if (t->id == type_id) {
+        if (t->id() == type_id) {
             return t;
         }
     }
@@ -289,7 +289,7 @@ OpTypeBase* Program::get_op_type(uint32_t type_id)
 OpTypePointer* Program::get_type_ptr(uint32_t id)
 {
     for (auto tp : type_ptrs_) {
-        if (tp->id == id) {
+        if (tp->id() == id) {
             return tp;
         }
     }
@@ -310,13 +310,13 @@ uint32_t Program::add_decoration(uint32_t var_id, const Decoration& dec)
     d->target_id = var_id;
     d->dec = dec;
     decs_.push_back(d);
-    return d->id;
+    return d->id();
 }
 
 
 
 std::ostream& operator<<(std::ostream& os, const Program& prag)
 {
-    prag.dump_spirv(os);
+    prag.dump(os);
     return os;
 }

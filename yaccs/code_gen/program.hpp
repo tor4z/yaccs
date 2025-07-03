@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <cstdint>
-#include <ostream>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -16,14 +15,7 @@ struct Program;
 template<typename T>
 struct ConstantComposite;
 
-struct ProgCompo
-{
-    virtual ~ProgCompo() = default;
-    virtual void dump_spirv(std::ostream& os) const = 0;
-}; // struct ProgCompo
-
-
-struct Variable: public ProgCompo
+struct Variable: public trait::Dumpable
 {
     Variable(Program* prog, uint32_t type_ptr);
     virtual ~Variable() override;
@@ -36,11 +28,11 @@ private:
     Program* prog_;
     OpVariable* op_var_;
 
-    virtual void dump_spirv(std::ostream& os) const override;
+    virtual void dump(std::ostream& os) const override;
 }; // struct Variable
 
 
-struct ConstValue : public ProgCompo
+struct ConstValue : public trait::Dumpable
 {
     virtual uint32_t id() = 0;
     virtual uint32_t type() = 0;
@@ -61,7 +53,7 @@ private:
     Program* prog_;
     OpConstant<T>* op_const_;
 
-    virtual void dump_spirv(std::ostream& os) const override;
+    virtual void dump(std::ostream& os) const override;
 }; // struct Constant
 
 
@@ -79,11 +71,11 @@ private:
     OpConstantComposite* op_const_comp_;
     std::vector<Constant<T>*> consts_;
 
-    virtual void dump_spirv(std::ostream& os) const override;
+    virtual void dump(std::ostream& os) const override;
 }; // struct ConstantComposite
 
 
-struct Function: public ProgCompo
+struct Function: public trait::Dumpable
 {
     virtual ~Function() override;
     Variable* new_var();
@@ -103,12 +95,12 @@ private:
     std::vector<Op*> ops_;
 
     uint32_t load(Variable* var);
-    virtual void dump_spirv(std::ostream& os) const override;
+    virtual void dump(std::ostream& os) const override;
     explicit Function(Program* prog, uint32_t ret_type, const std::vector<uint32_t>& params);
 }; // class Function
 
 
-struct Program: public ProgCompo
+struct Program: public trait::Dumpable
 {
     Program();
     virtual ~Program() override;
@@ -124,12 +116,12 @@ struct Program: public ProgCompo
 
     void prologue();
     void set_entry_id(uint32_t id, const std::vector<uint32_t>& params);
-    OpTypeBase* get_op_type(uint32_t type_id);
+    Type* get_op_type(uint32_t type_id);
     uint32_t get_type_ptr_id(uint32_t type_id, StorageClass sc);
     uint32_t add_decoration(uint32_t var_id, const Decoration& dec);
     OpTypePointer* get_type_ptr(uint32_t id);
-    
-    virtual void dump_spirv(std::ostream& os) const override;
+
+    virtual void dump(std::ostream& os) const override;
 private:
     friend std::ostream& operator<<(std::ostream&, const Program&); 
 
@@ -137,12 +129,12 @@ private:
     OpMemoryModel* mem_mode_;
     OpEntryPoint* entry_point_;
 
-    std::vector<ProgCompo*> const_comps_;
-    std::vector<ProgCompo*> consts_;
+    std::vector<Dumpable*> const_comps_;
+    std::vector<Dumpable*> consts_;
     std::vector<Function*> fns_;
     std::vector<Variable*> vars_;
     std::vector<OpDecorate*> decs_;
-    std::vector<OpTypeBase*> types_;
+    std::vector<Type*> types_;
     std::vector<OpTypePointer*> type_ptrs_;
 }; // class Program
 
@@ -161,6 +153,7 @@ uint32_t Program::get_type(DType dt, Args&& ...args)
     CREATE_GET_TYPE_ID(DType::FLOAT);
     CREATE_GET_TYPE_ID(DType::VEC);
     CREATE_GET_TYPE_ID(DType::FN);
+    CREATE_GET_TYPE_ID(DType::STRUCT);
     default: NOT_IMPLEMENTED("get_type");
     }
     return 0;
@@ -218,7 +211,7 @@ uint32_t Constant<T>::type()
 
 
 template <typename T>
-void Constant<T>::dump_spirv(std::ostream& os) const
+void Constant<T>::dump(std::ostream& os) const
 {
     CodeGen::gen(os, op_const_);
 }
@@ -233,7 +226,7 @@ ConstantComposite<T>::ConstantComposite(Program* prog, uint32_t type, const std:
     auto comp_type{prog_->get_op_type(type)};
 
     for (auto v : values) {
-        auto c{new Constant<T>(prog, comp_type->comp_type, v)};
+        auto c{new Constant<T>(prog, comp_type->type()->comp_type, v)};
         op_const_comp_->comps.push_back(c->id());
         consts_.push_back(c);
     }
@@ -254,7 +247,7 @@ ConstantComposite<T>::~ConstantComposite()
 template <typename T>
 uint32_t ConstantComposite<T>::id()
 {
-    return op_const_comp_->id;
+    return op_const_comp_->id();
 }
 
 
@@ -266,10 +259,10 @@ uint32_t ConstantComposite<T>::type()
 
 
 template <typename T>
-void ConstantComposite<T>::dump_spirv(std::ostream& os) const
+void ConstantComposite<T>::dump(std::ostream& os) const
 {
     for (auto c : consts_) {
-        c->dump_spirv(os);
+        c->dump(os);
     }
     CodeGen::gen(os, op_const_comp_);
 }

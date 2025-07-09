@@ -7,6 +7,9 @@ add_compile_options(-g)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}/${CMAKE_CURRENT_LIST_DIR}/3rdparty/cmake")
 
-add_subdirectory(3rdparty/onnx)
+include(onnx)
+
+
 add_subdirectory(yaccs)

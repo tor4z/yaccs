@@ -12,6 +12,10 @@ int main(int argc, char** argv)
     model.ParseFromIstream(&ifs);
     ifs.close();
 
+    // Program program;
+    // program.add_input();
+    // program.add_output();
+
     std::cout << "name: " << model.graph().name() << "\n";
     std::cout << "=======\n";
 
@@ -64,8 +68,12 @@ int main(int argc, char** argv)
     std::cout << "input size: " << model.graph().input().size() << "\n";
     for (const auto& it : model.graph().input()) {
         std::cout << "\t" << it.name() <<"\n"; 
-        std::cout << "\t" << it.GetTypeName() <<"\n"; 
-        std::cout << "\t" << it.type().GetTypeName() <<"\n"; 
+        if (it.type().has_tensor_type()) {
+            std::cout << "\tTensor Dims[";
+            for (const auto& dim : it.type().tensor_type().shape().dim())
+                std::cout << dim.dim_param() << ":" << dim.dim_value() <<" "; 
+            std::cout << "]\n";
+        }
     }
     std::cout << "output size: " << model.graph().output().size() << "\n";
     for (const auto& it : model.graph().output()) {

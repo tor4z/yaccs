@@ -2,6 +2,7 @@
 #define YACCS_CODE_GEN_H_
 
 #include "yaccs/dtype.hpp"
+#include "yaccs/code_gen/def.hpp"
 #include <fstream>
 #include <sstream>
 
@@ -9,7 +10,9 @@ struct CodeGen
 {
     CodeGen();
     void push_header();
-    void push_type(DType dt, id_t id);
+    void push_dtype(DType dt, id_t id);
+    void push_array_type(const ArrTypeDef& arr);
+    void push_struct_type(const StructTypeDef& sd);
     void assemble(std::ofstream& ofs);
 private:
     std::stringstream header_ss_;

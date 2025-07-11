@@ -1,5 +1,6 @@
 #include "yaccs/code_gen/code_gen.hpp"
 #include <cassert>
+#include <cstddef>
 
 
 CodeGen::CodeGen()
@@ -13,7 +14,7 @@ void CodeGen::push_header()
     header_ss_ << "OpMemoryModel Logical GLSL450\n";
 }
 
-void CodeGen::push_type(DType dt, id_t id)
+void CodeGen::push_dtype(DType dt, id_t id)
 {
     switch (dt) {
     case DT_FLOAT:
@@ -22,8 +23,26 @@ void CodeGen::push_type(DType dt, id_t id)
     case DT_FLOAT16:
         type_def_ss_ << "%" << id << " = OpTypeFloat 16\n";
         break;
+    case DT_INT32:
+        type_def_ss_ << "%" << id << " = OpTypeInt 32 1\n";
+        break;
     default: assert(false && "Unsupported type");
     }
+}
+
+void CodeGen::push_array_type(const ArrTypeDef& arr)
+{
+    type_def_ss_ << "%" << arr.id << " = OpTypeArray " << arr.dtype << arr.length << "\n";
+}
+
+void CodeGen::push_struct_type(const StructTypeDef& sd)
+{
+    type_def_ss_ << "%" << sd.id << " = OpTypeStruct ";
+    for (size_t i = 0; i < sd.num_fields; ++i) {
+        type_def_ss_ << sd.fields[i];
+        if (i != sd.num_fields - 1) type_def_ss_ << " ";
+    }
+    type_def_ss_ << "\n";
 }
 
 void CodeGen::assemble(std::ofstream& ofs)

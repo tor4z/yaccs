@@ -1,5 +1,8 @@
+file(GLOB_RECURSE SRCS *.cpp)
+
+
 add_executable(${PROJECT_NAME}
-    ${CMAKE_CURRENT_LIST_DIR}/main.cpp
+    ${SRCS}
     ${ONNX_SRC}
 )
 

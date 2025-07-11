@@ -1,31 +1,25 @@
 #ifndef YACCS_CODE_GEN_H_
 #define YACCS_CODE_GEN_H_
 
-#include "ops.hpp"
-#include "types.hpp"
-#include <ostream>
-#include <string>
-#include <iomanip>
+#include "yaccs/dtype.hpp"
+#include <fstream>
+#include <sstream>
 
 struct CodeGen
 {
-    static void gen(std::ostream& ss, const OpCapability* op);
-    static void gen(std::ostream& ss, const OpMemoryModel* op);
-    static void gen(std::ostream& ss, const OpEntryPoint* op);
-    static void gen(std::ostream& ss, const OpDecorate* op);
-    static void gen(std::ostream& ss, const OpFunction* op);
-    static void gen(std::ostream& ss, const OpLabel* op);
-    static void gen(std::ostream& ss, const OpLoad* op);
-    static void gen(std::ostream& ss, const OpStore* op);
-    static void gen(std::ostream& ss, const OpReturn* op);
-    static void gen(std::ostream& ss, const OpFunctionEnd* op);
-    static void gen(std::ostream& ss, const OpTypePointer* op);
-    static void gen(std::ostream& ss, const OpVariable* op);
-
-    template<typename T>
-    static void gen(std::ostream& ss, const OpConstant<T>* op);
-    static void gen(std::ostream& ss, const OpConstantComposite* op);
-    static void gen(std::ostream& ss, const Op* op);
+    CodeGen();
+    void push_header();
+    void push_type(DType dt, id_t id);
+    void assemble(std::ofstream& ofs);
+private:
+    std::stringstream header_ss_;
+    std::stringstream entry_def_ss_;
+    std::stringstream decorate_ss_;
+    std::stringstream type_def_ss_;
+    std::stringstream input_def_ss_;
+    std::stringstream output_def_ss_;
+    std::stringstream const_def_ss_;
+    std::stringstream fn_def_ss_;
 }; // class CodeGen
 
 #endif // YACCS_CODE_GEN_H_

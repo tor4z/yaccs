@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <onnx.pb.h>
+#include "code_gen/program.hpp"
 
 
 int main(int argc, char** argv)
@@ -12,12 +13,45 @@ int main(int argc, char** argv)
     model.ParseFromIstream(&ifs);
     ifs.close();
 
-    // Program program;
-    // program.add_input();
-    // program.add_output();
+    Program program;
+    program.set_name("a.spvasm");
+    for (const auto& it : model.graph().input()) {
+        if (it.type().has_tensor_type()) {
+            TensorType tt;
+            tt.dtype = static_cast<DType>(it.type().tensor_type().elem_type());
+            program.add_input(tt);
+        }
+    }
 
-    std::cout << "name: " << model.graph().name() << "\n";
+    for (const auto& it : model.graph().output()) {
+        if (it.type().has_tensor_type()) {
+            TensorType tt;
+            tt.dtype = static_cast<DType>(it.type().tensor_type().elem_type());
+            program.add_output(tt);
+        }
+    }
+
+    program.dump_ir();
+
+    std::cout << "========================================\n";
+    std::cout << "name: " << model.graph().name() << "\n"; 
     std::cout << "=======\n";
+
+    std::cout << "input size: " << model.graph().input().size() << "\n";
+    for (const auto& it : model.graph().input()) {
+        std::cout << "\t" << it.name() <<"\n"; 
+        if (it.type().has_tensor_type()) {
+            std::cout << "\tDType: " << it.type().tensor_type().elem_type() << "\n";
+            std::cout << "\tTensor Dims[";
+            for (const auto& dim : it.type().tensor_type().shape().dim())
+                std::cout << dim.dim_param() << ":" << dim.dim_value() <<" "; 
+            std::cout << "]\n";
+        }
+    }
+    std::cout << "output size: " << model.graph().output().size() << "\n";
+    for (const auto& it : model.graph().output()) {
+        std::cout << "\t" << it.name() <<"\n"; 
+    }
 
     for (const auto& node: model.graph().node()) {
         std::cout << node.name() << "\n";
@@ -65,20 +99,6 @@ int main(int argc, char** argv)
         // std::cout << "\n";
     }
 
-    std::cout << "input size: " << model.graph().input().size() << "\n";
-    for (const auto& it : model.graph().input()) {
-        std::cout << "\t" << it.name() <<"\n"; 
-        if (it.type().has_tensor_type()) {
-            std::cout << "\tTensor Dims[";
-            for (const auto& dim : it.type().tensor_type().shape().dim())
-                std::cout << dim.dim_param() << ":" << dim.dim_value() <<" "; 
-            std::cout << "]\n";
-        }
-    }
-    std::cout << "output size: " << model.graph().output().size() << "\n";
-    for (const auto& it : model.graph().output()) {
-        std::cout << "\t" << it.name() <<"\n"; 
-    }
-
+    std::cout << "--------------------------------\n";
     return 0;
 }

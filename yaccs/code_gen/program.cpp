@@ -28,15 +28,9 @@ void Program::add_input(const TensorType& tensor)
      * }
      */
 
-    size_t data_size{1};
-    for (int i = 0; i < tensor.dims; ++i) {
-        std::cout << "=== tensor.shape[i]: " << tensor.shape[i] << "\n";
-        data_size *= tensor.shape[i];
-    }
-
     auto type_id{add_dtype(tensor.dtype)};
     auto dt_int{add_dtype(DT_INT32)};
-    auto dt_arr{add_array_dtype(type_id, data_size)};
+    auto dt_arr{add_array_dtype(type_id, shape_to_dsize(tensor.dims, tensor.shape))};
     add_struct_dtype({dt_int, dt_int, dt_arr});
 }
 
@@ -49,6 +43,7 @@ void Program::add_output(const TensorType& tensor)
      */
 
     auto type_id{add_dtype(tensor.dtype)};
+    add_array_dtype(type_id, shape_to_dsize(tensor.dims, tensor.shape));
 }
 
 void Program::dump_ir()

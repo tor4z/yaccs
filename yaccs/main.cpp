@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include "code_gen/program.hpp"
+#include "yaccs/utils.hpp"
 
 
 int main(int argc, char** argv)
@@ -17,27 +18,20 @@ int main(int argc, char** argv)
     ifs.close();
 
 
-    std::unordered_map<std::string, int> input_params {
+    std::unordered_map<std::string, int> input_dynamic_axes {
         {"batch_size", 1}
     };
+    std::unordered_map<std::string, int> output_dynamic_axes {
+        {"batch_size", 1}
+    };
+
     Program program;
     program.set_name("a.spvasm");
 
     for (const auto& it : model.graph().input()) {
         if (it.type().has_tensor_type()) {
             TensorType tt{};
-            const auto& onnx_tensor{it.type().tensor_type()};
-            tt.dims = onnx_tensor.shape().dim_size();
-            tt.dtype = static_cast<DType>(onnx_tensor.elem_type());
-            for (int i = 0; i < tt.dims; ++i) {
-                const auto& dim{onnx_tensor.shape().dim().Get(i)};
-                if (!dim.dim_param().empty()) {
-                    assert(input_params.find(dim.dim_param()) != input_params.end() && "Input param not defined");
-                    tt.shape[i] = input_params.at(dim.dim_param());
-                } else {
-                    tt.shape[i] = dim.dim_value();
-                }
-            }
+            tensor_type_from_onnx(it.type().tensor_type(), tt, input_dynamic_axes);
             program.add_input(tt);
         }
     }
@@ -45,7 +39,7 @@ int main(int argc, char** argv)
     for (const auto& it : model.graph().output()) {
         if (it.type().has_tensor_type()) {
             TensorType tt{};
-            tt.dtype = static_cast<DType>(it.type().tensor_type().elem_type());
+            tensor_type_from_onnx(it.type().tensor_type(), tt, output_dynamic_axes);
             program.add_output(tt);
         }
     }

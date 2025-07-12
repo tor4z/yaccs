@@ -1,5 +1,5 @@
-#ifndef YACCS_UTILS_H_
-#define YACCS_UTILS_H_
+#ifndef YACCS_CODE_GEN_UTILS_H_
+#define YACCS_CODE_GEN_UTILS_H_
 
 #include "yaccs/code_gen/def.hpp"
 #include <cassert>
@@ -18,4 +18,13 @@ inline id_t alloc_id()
     return result;
 }
 
-#endif // YACCS_UTILS_H_
+inline int shape_to_dsize(int dims, const int shape[])
+{
+    int data_size{1};
+    for (int i = 0; i < dims; ++i) {
+        data_size *= shape[i];
+    }
+    return data_size;
+}
+
+#endif // YACCS_CODE_GEN_UTILS_H_

@@ -1,7 +1,7 @@
 # Yet Another Compiler for Computer Shader (yaccs)
 
 
-### Prequiremnents
+### Prerequiremnents
 
 - spirv-tools, for spvasm validate
 - highlight, to print code with hightligh

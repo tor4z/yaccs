@@ -1,8 +1,11 @@
+#include <cassert>
 #include <cstdint>
 #include <endian.h>
 #include <fstream>
 #include <iostream>
 #include <onnx.pb.h>
+#include <string>
+#include <unordered_map>
 #include "code_gen/program.hpp"
 
 
@@ -13,19 +16,35 @@ int main(int argc, char** argv)
     model.ParseFromIstream(&ifs);
     ifs.close();
 
+
+    std::unordered_map<std::string, int> input_params {
+        {"batch_size", 1}
+    };
     Program program;
     program.set_name("a.spvasm");
+
     for (const auto& it : model.graph().input()) {
         if (it.type().has_tensor_type()) {
-            TensorType tt;
-            tt.dtype = static_cast<DType>(it.type().tensor_type().elem_type());
+            TensorType tt{};
+            const auto& onnx_tensor{it.type().tensor_type()};
+            tt.dims = onnx_tensor.shape().dim_size();
+            tt.dtype = static_cast<DType>(onnx_tensor.elem_type());
+            for (int i = 0; i < tt.dims; ++i) {
+                const auto& dim{onnx_tensor.shape().dim().Get(i)};
+                if (!dim.dim_param().empty()) {
+                    assert(input_params.find(dim.dim_param()) != input_params.end() && "Input param not defined");
+                    tt.shape[i] = input_params.at(dim.dim_param());
+                } else {
+                    tt.shape[i] = dim.dim_value();
+                }
+            }
             program.add_input(tt);
         }
     }
 
     for (const auto& it : model.graph().output()) {
         if (it.type().has_tensor_type()) {
-            TensorType tt;
+            TensorType tt{};
             tt.dtype = static_cast<DType>(it.type().tensor_type().elem_type());
             program.add_output(tt);
         }

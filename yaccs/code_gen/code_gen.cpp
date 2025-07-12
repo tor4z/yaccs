@@ -30,16 +30,16 @@ void CodeGen::push_dtype(DType dt, id_t id)
     }
 }
 
-void CodeGen::push_array_type(const ArrTypeDef& arr)
+void CodeGen::push_array_dtype(const ArrTypeDef& arr)
 {
-    type_def_ss_ << "%" << arr.id << " = OpTypeArray " << arr.dtype << arr.length << "\n";
+    type_def_ss_ << "%" << arr.id << " = OpTypeArray %" << arr.dtype << " %" << arr.length_id << "\n";
 }
 
-void CodeGen::push_struct_type(const StructTypeDef& sd)
+void CodeGen::push_struct_dtype(const StructTypeDef& sd)
 {
     type_def_ss_ << "%" << sd.id << " = OpTypeStruct ";
     for (size_t i = 0; i < sd.num_fields; ++i) {
-        type_def_ss_ << sd.fields[i];
+        type_def_ss_ << "%" << sd.fields[i];
         if (i != sd.num_fields - 1) type_def_ss_ << " ";
     }
     type_def_ss_ << "\n";

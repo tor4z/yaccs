@@ -3,6 +3,7 @@
 
 #include "yaccs/dtype.hpp"
 #include <string>
+#include <vector>
 
 #define MAX_TENSOR_DIMS 6
 
@@ -14,5 +15,11 @@ struct TensorType
     DType dtype;
     int dims;
 }; // struct TensorType
+
+struct Tensor
+{
+    TensorType tt;
+    std::vector<char> data;
+}; // struct Tensor
 
 #endif // YACCS_TENSOR_H_

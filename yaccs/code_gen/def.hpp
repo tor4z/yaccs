@@ -9,8 +9,9 @@
 using id_t = uint32_t;
 
 struct ArrTypeDef {
-    id_t dtype;
     int length;
+    id_t dtype;
+    id_t length_id;
     id_t id;
 }; // struct ArrTypeDef
 
@@ -19,5 +20,13 @@ struct StructTypeDef {
     id_t id;
     size_t num_fields;
 }; // struct StructTypeDef
+
+template<typename T>
+struct DTypeConstDef
+{
+    T value;
+    id_t dtype_id;
+    id_t id;
+}; // struct DtypeConstDef
 
 #endif // YACCS_DEF_H_

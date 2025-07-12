@@ -1,12 +1,14 @@
 #include "yaccs/code_gen/program.hpp"
 #include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
-#include <cassert>
-#include <cstring>
-#include <sys/types.h>
+#include "yaccs/dtype.hpp"
 #include <unordered_map>
+#include <cassert>
+#include <cstddef>
+#include <cstring>
 #include <fstream>
 #include <utility>
+#include <iostream>
 
 
 Program::Program()
@@ -18,15 +20,35 @@ void Program::set_name(const std::string& name) { name_  = name; }
 
 void Program::add_input(const TensorType& tensor)
 {
+    /*
+     * {
+     *     int dims;
+     *     int shape[];
+     *     DType data[];
+     * }
+     */
+
+    size_t data_size{1};
+    for (int i = 0; i < tensor.dims; ++i) {
+        std::cout << "=== tensor.shape[i]: " << tensor.shape[i] << "\n";
+        data_size *= tensor.shape[i];
+    }
+
     auto type_id{add_dtype(tensor.dtype)};
     auto dt_int{add_dtype(DT_INT32)};
-    
+    auto dt_arr{add_array_dtype(type_id, data_size)};
+    add_struct_dtype({dt_int, dt_int, dt_arr});
 }
 
 void Program::add_output(const TensorType& tensor)
 {
+    /*
+     * {
+     *     DType data[];
+     * }
+     */
+
     auto type_id{add_dtype(tensor.dtype)};
-    auto dt_int{add_dtype(DT_INT32)};
 }
 
 void Program::dump_ir()
@@ -47,10 +69,10 @@ id_t Program::add_dtype(DType dtype)
     return defs_.at(dtype);
 }
 
-id_t Program::add_struct_type(const std::vector<id_t>& dtypes)
+id_t Program::add_struct_dtype(const std::vector<id_t>& dtypes)
 {
     assert(dtypes.size() <= MAX_STRUCT_FIELDS && "struct containting too much fields");
-    static std::vector<StructTypeDef> defs_;
+    static std::vector<StructTypeDef> defs;
 
     auto struct_match{[&dtypes] (const StructTypeDef& sd) -> bool {
         if (sd.num_fields != dtypes.size()) return false;
@@ -60,7 +82,7 @@ id_t Program::add_struct_type(const std::vector<id_t>& dtypes)
         return true;
     }};
 
-    for (const auto& it : defs_) {
+    for (const auto& it : defs) {
         if (struct_match(it)) {
             return it.id;
         }
@@ -68,23 +90,24 @@ id_t Program::add_struct_type(const std::vector<id_t>& dtypes)
 
     StructTypeDef sd{.id = alloc_id(), .num_fields = dtypes.size()};
     memcpy(sd.fields, dtypes.data(), sizeof(sd.fields[0]) * sd.num_fields);
-    defs_.push_back(sd);
-    code_gen_.push_struct_type(sd);
+    defs.push_back(sd);
+    code_gen_.push_struct_dtype(sd);
     return sd.id;
 }
 
-id_t Program::add_array_type(id_t dtype, int length)
+id_t Program::add_array_dtype(id_t dtype, int length)
 {
-    static std::vector<ArrTypeDef> defs_;
+    static std::vector<ArrTypeDef> defs;
 
-    for (const auto& it : defs_) {
+    for (const auto& it : defs) {
         if (it.dtype == dtype && it.length == length) {
             return it.id;
         }
     }
 
-    ArrTypeDef arr{.dtype = dtype, .length = length, .id = alloc_id()};
-    defs_.push_back(arr);
-    code_gen_.push_array_type(arr);
+    id_t length_id{add_const_dtype(DT_INT32, length)};
+    ArrTypeDef arr{.length = length, .dtype = dtype, .length_id = length_id, .id = alloc_id()};
+    defs.push_back(arr);
+    code_gen_.push_array_dtype(arr);
     return arr.id;
 }

@@ -23,23 +23,22 @@ struct CodeGen
     void push_function_type(const FunctionTypeDef& ft);
     void push_decorate_set_binding(const DecorateSetBindingDef& deco);
     void push_const_composite(const ConstCompositeDef& ccd);
+    void push_variable(const VarDef& var);
+    void push_type_pointer(const TypePointerDef& tp);
     template<typename T>
     void push_const_dtype(const DTypeConstDef<T>& dconst);
 private:
     std::stringstream header_ss_;
     std::stringstream entry_def_ss_;
     std::stringstream decorate_ss_;
-    std::stringstream type_def_ss_;
-    std::stringstream input_def_ss_;
-    std::stringstream output_def_ss_;
-    std::stringstream const_def_ss_;
+    std::stringstream type_const_def_ss_;
     std::stringstream fn_def_ss_;
 }; // class CodeGen
 
 template<typename T>
 void CodeGen::push_const_dtype(const DTypeConstDef<T>& dconst)
 {
-    const_def_ss_ << "%" << dconst.id << " = OpConstant %" << dconst.dtype_id << " " << dconst.value << "\n";
+    type_const_def_ss_ << "%" << dconst.id << " = OpConstant %" << dconst.dtype_id << " " << dconst.value << "\n";
 }
 
 #endif // YACCS_CODE_GEN_H_

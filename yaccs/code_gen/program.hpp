@@ -29,11 +29,12 @@ private:
     id_t add_function_type(id_t return_type_id);
     id_t add_struct_dtype(const std::vector<id_t>& dtypes);
     id_t add_array_dtype(id_t dtype, int length);
-    id_t add_array(id_t arr_type, const std::vector<id_t>& elem_ids);
+    id_t add_const_array(id_t arr_type, const std::vector<id_t>& elem_ids);
     id_t add_dtype(DType dtype);
     id_t add_const_tensor(const Tensor& tensor);
-    id_t add_tensor_type(const TensorType& tensor_type, DecorateSetBindingDef deco);
     id_t add_tensor_type(const TensorType& tensor_type);
+    id_t add_type_pointer(id_t type_id);
+    id_t add_var(id_t type_id);
     id_t add_raw_const(DType dtype, int elem_idx, const char* data);
     template<typename T>
     id_t add_const(DType dtype, T value);

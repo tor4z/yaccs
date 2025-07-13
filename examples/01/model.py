@@ -6,9 +6,9 @@ class Model(nn.Module):
     def __init__(self):
         super().__init__()
         # Define the layers of the network
-        self.fc1 = nn.Linear(16, 32)  # First fully connected layer
+        self.fc1 = nn.Linear(4, 8)  # First fully connected layer
         self.relu = nn.ReLU()                          # ReLU activation function
-        self.fc2 = nn.Linear(32, 4) # Second fully connected layer
+        self.fc2 = nn.Linear(8, 4) # Second fully connected layer
 
     def forward(self, x):
         # Define the forward pass (how data flows through the network)
@@ -21,7 +21,7 @@ class Model(nn.Module):
 if __name__ == "__main__":
     ONNX_PATH = "model.onnx"
 
-    dummy_input = torch.randn(1, 16)
+    dummy_input = torch.randn(1, 4)
     model = Model()
 
     print(model.forward(dummy_input))

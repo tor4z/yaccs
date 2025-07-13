@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #define MAX_STRUCT_FIELDS 16
 
@@ -21,6 +22,12 @@ struct StructTypeDef {
     size_t num_fields;
 }; // struct StructTypeDef
 
+struct ConstCompositeDef {
+    std::vector<id_t> elem_ids;
+    id_t type_id;
+    id_t id;
+}; // struct ArrTypeDef
+
 template<typename T>
 struct DTypeConstDef
 {
@@ -28,5 +35,25 @@ struct DTypeConstDef
     id_t dtype_id;
     id_t id;
 }; // struct DtypeConstDef
+
+struct FunctionTypeDef
+{
+    id_t return_type_id;
+    id_t id;
+}; // struct FuncTypeDef
+
+struct FunctionHeaderDef
+{
+    id_t return_type_id;
+    id_t function_type_id;
+    id_t id;
+}; // struct FunctionHeaderDef
+
+struct DecorateSetBindingDef
+{
+    id_t target;
+    int binding;
+    int set;
+}; // struct SetBindingDef
 
 #endif // YACCS_DEF_H_

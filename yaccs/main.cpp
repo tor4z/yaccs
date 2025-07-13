@@ -1,3 +1,6 @@
+#include "code_gen/program.hpp"
+#include "yaccs/utils.hpp"
+#include "yaccs/ops.hpp"
 #include <cassert>
 #include <cstdint>
 #include <endian.h>
@@ -6,8 +9,7 @@
 #include <onnx.pb.h>
 #include <string>
 #include <unordered_map>
-#include "code_gen/program.hpp"
-#include "yaccs/utils.hpp"
+
 
 
 int main(int argc, char** argv)
@@ -44,27 +46,21 @@ int main(int argc, char** argv)
         }
     }
 
-    program.dump_ir();
-
-    std::cout << "========================================\n";
-    std::cout << "name: " << model.graph().name() << "\n"; 
-    std::cout << "=======\n";
-
-    std::cout << "input size: " << model.graph().input().size() << "\n";
-    for (const auto& it : model.graph().input()) {
-        std::cout << "\t" << it.name() <<"\n"; 
-        if (it.type().has_tensor_type()) {
-            std::cout << "\tDType: " << it.type().tensor_type().elem_type() << "\n";
-            std::cout << "\tTensor Dims[";
-            for (const auto& dim : it.type().tensor_type().shape().dim())
-                std::cout << dim.dim_param() << ":" << dim.dim_value() <<" "; 
-            std::cout << "]\n";
+    for (const auto& node: model.graph().node()) {
+        if (node.op_type().compare("Gemm") == 0) {
+            OpGemm gemm;
+            gemm_from_onnx(node, model.graph(), gemm);
+            program.add_gemm(gemm);
+        } else if (node.op_type().compare("Relu") == 0) {
+            OpRelu relu;
+            relu_from_onnx(node, relu);
+            program.add_relu(relu);
+        } else {
+            assert(false && "Not supportted operator");
         }
     }
-    std::cout << "output size: " << model.graph().output().size() << "\n";
-    for (const auto& it : model.graph().output()) {
-        std::cout << "\t" << it.name() <<"\n"; 
-    }
+
+    program.dump_ir();
 
     for (const auto& node: model.graph().node()) {
         std::cout << node.name() << "\n";

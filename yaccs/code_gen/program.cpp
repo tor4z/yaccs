@@ -2,6 +2,7 @@
 #include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
 #include "yaccs/dtype.hpp"
+#include <cstdint>
 #include <unordered_map>
 #include <cassert>
 #include <cstddef>
@@ -30,6 +31,16 @@ void Program::add_input(const TensorType& tensor_type)
     deco.target = var_id;
     code_gen_.push_decorate_set_binding(deco);
 
+}
+
+void Program::set_main()
+{
+    EntryDef ed;
+    auto return_type_id{add_void_type()};
+    ed.main_id = add_function_prologue(return_type_id);
+    add_function_epilogue();
+
+    code_gen_.push_entry(ed);
 }
 
 void Program::add_output(const TensorType& tensor_type)
@@ -146,20 +157,48 @@ id_t Program::add_tensor_type(const TensorType& tensor_type)
      * }
      */
 
+    static std::vector<DecorateStructDef> decos;
+
+    uint32_t offset{0};
+    uint32_t field_idx{0};
     int num_elems{1};
+    DecorateStructDef dsd;
     auto type_id{add_dtype(tensor_type.dtype)}; // define type dtype
     auto dt_int{add_dtype(DT_INT32)};           // define int type
     std::vector<id_t> struct_ids;
     struct_ids.push_back(dt_int);
+    dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
+    offset += 4;
+
+    auto already_decorate_in{[&dsd] (const std::vector<DecorateStructDef>& targets) -> bool {
+        for (const auto& it : targets) {
+            if (it.struct_type_id == dsd.struct_type_id) return true;
+        }
+        return false;
+    }};
 
     for (int i = 0; i < tensor_type.dims; ++i) {
         struct_ids.push_back(dt_int);
         num_elems *= tensor_type.shape[i];
+        dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
+        offset += 4;
     }
+
+    const auto data_member_bytes{dtype_bytes(tensor_type.dtype)};
     for (int i = 0; i < num_elems; ++i) {
         struct_ids.push_back(type_id);
+        dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
+        offset += data_member_bytes;
     }
     auto struct_type_id{add_struct_dtype(struct_ids)};
+
+    dsd.deco = DECO_BLOCK;
+    dsd.struct_type_id = struct_type_id;
+
+    if (!already_decorate_in(decos)) {
+        decos.push_back(dsd);
+        code_gen_.push_struct_decorate(dsd);
+    }
 
     return struct_type_id;
 }

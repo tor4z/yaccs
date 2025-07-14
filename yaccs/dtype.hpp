@@ -1,6 +1,8 @@
 #ifndef YACCS_DTYPE_H_
 #define YACCS_DTYPE_H_
 
+#include <cstdint>
+
 #define DT_FLOAT_BYTES 4
 #define DT_UINT8_BYTES 1
 #define DT_INT8_BYTES 1
@@ -8,7 +10,7 @@
 #define DT_INT16_BYTES 2
 #define DT_INT32_BYTES 3
 #define DT_INT64_BYTES 8
-#define DT_BOOL_BYTES ??
+#define DT_BOOL_BYTES 1
 #define DT_FLOAT16_BYTES 2
 #define DT_DOUBLE_BYTES 8
 #define DT_UINT32_BYTES 4
@@ -72,5 +74,34 @@ enum DType {
 
     // Future extensions go here.
 }; // enum DType
+
+inline uint32_t dtype_bytes(DType dtype)
+{
+    switch (dtype) {
+    case DT_FLOAT:          return DT_FLOAT_BYTES;
+    case DT_UINT8:          return DT_UINT8_BYTES;
+    case DT_INT8:           return DT_INT8_BYTES;
+    case DT_UINT16:         return DT_UINT16_BYTES;
+    case DT_INT16:          return DT_INT16_BYTES;
+    case DT_INT32:          return DT_INT32_BYTES;
+    case DT_INT64:          return DT_INT64_BYTES;
+    case DT_BOOL:           return DT_BOOL_BYTES;
+    case DT_FLOAT16:        return DT_FLOAT16_BYTES;
+    case DT_DOUBLE:         return DT_DOUBLE_BYTES;
+    case DT_UINT32:         return DT_UINT32_BYTES;
+    case DT_UINT64:         return DT_UINT64_BYTES;
+    case DT_COMPLEX64:      return DT_COMPLEX64_BYTES;
+    case DT_COMPLEX128:     return DT_COMPLEX128_BYTES;
+    case DT_BFLOAT16:       return DT_BFLOAT16_BYTES;
+    case DT_FLOAT8E4M3FN:   return DT_FLOAT8E4M3FN_BYTES;
+    case DT_FLOAT8E4M3FNUZ: return DT_FLOAT8E4M3FNUZ_BYTES;
+    case DT_FLOAT8E5M2:     return DT_FLOAT8E5M2_BYTES;
+    case DT_FLOAT8E5M2FNUZ: return DT_FLOAT8E5M2FNUZ_BYTES;
+    case DT_UINT4:          return DT_UINT4_BYTES;
+    case DT_INT4:           return DT_INT4_BYTES;
+    case DT_FLOAT4E2M1:     return DT_FLOAT4E2M1_BYTES;
+    default:                return 1;
+    }
+}
 
 #endif // YACCS_DTYPE_H_

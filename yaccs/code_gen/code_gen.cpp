@@ -14,6 +14,25 @@ void CodeGen::push_header()
     header_ss_ << "OpMemoryModel Logical GLSL450\n";
 }
 
+void CodeGen::push_entry(const EntryDef& ed)
+{
+    entry_def_ss_ << "OpEntryPoint Fragment %" << ed.main_id << " \"main\"";
+    for (auto it: ed.input_ids) {
+        entry_def_ss_ << " %" << it;
+    }
+    entry_def_ss_ << "\n";
+
+    entry_def_ss_ << "OpExecutionMode %" << ed.main_id << " OriginUpperLeft\n";
+}
+
+void CodeGen::push_struct_decorate(const DecorateStructDef& dsd)
+{
+    decorate_ss_ << "OpDecorate %" << dsd.struct_type_id << " Block\n";
+    for (const auto& it : dsd.member_deco) {
+        decorate_ss_ << "OpMemberDecorate %" << dsd.struct_type_id << " " << it.field << " Offset " << it.offset << "\n";
+    }
+}
+
 void CodeGen::push_dtype(DType dt, id_t id)
 {
     switch (dt) {

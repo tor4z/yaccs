@@ -7,6 +7,14 @@
 
 using id_t = uint32_t;
 
+enum Decoration
+{
+    DECO_RELAXEDPRECISION = 1,
+    DECO_SPECID,
+    DECO_BLOCK,
+}; // enum Decoration
+
+
 struct ArrTypeDef {
     int length;
     id_t dtype;
@@ -47,13 +55,6 @@ struct FunctionHeaderDef
     id_t id;
 }; // struct FunctionHeaderDef
 
-struct DecorateSetBindingDef
-{
-    id_t target;
-    int binding;
-    int set;
-}; // struct SetBindingDef
-
 struct VarDef
 {
     id_t id;
@@ -65,5 +66,32 @@ struct TypePointerDef
     id_t id;
     id_t type_id;
 }; // struct TypePointerDef
+
+struct EntryDef
+{
+    id_t main_id;
+    std::vector<id_t> input_ids;
+}; // struct EntryDef
+
+
+struct DecorateSetBindingDef
+{
+    id_t target;
+    int binding;
+    int set;
+}; // struct SetBindingDef
+
+struct DecorateStructDef
+{
+    struct FieldOffset
+    {
+        uint32_t field;
+        uint32_t offset;
+    }; // struct FieldOffset
+
+    std::vector<FieldOffset> member_deco;
+    id_t struct_type_id;
+    Decoration deco;
+}; // struct DecorateStructDef
 
 #endif // YACCS_DEF_H_

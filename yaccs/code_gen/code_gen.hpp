@@ -12,6 +12,8 @@ struct CodeGen
     void assemble(std::ofstream& ofs);
 
     void push_header();
+    void push_entry(const EntryDef& ed);
+    void push_struct_decorate(const DecorateStructDef& dsd);
     void push_label(id_t id);
     void push_return();
     void push_function_end();

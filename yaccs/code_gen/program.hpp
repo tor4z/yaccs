@@ -13,6 +13,7 @@ struct Program
 {
     Program();
     void set_name(const std::string& name);
+    void set_main();
     void add_input(const TensorType& tensor_type);
     void add_output(const TensorType& tensor_type);
     void add_gemm(const OpGemm& gemm);

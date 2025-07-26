@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <unordered_map>
 #include <cassert>
-#include <cstddef>
 #include <cstring>
 #include <fstream>
 #include <utility>
@@ -18,7 +17,26 @@ Program::Program()
     code_gen_.push_header();
 }
 
-void Program::set_name(const std::string& name) { name_  = name; }
+void Program::set_name(const std::string& name)
+{
+    name_  = name;
+}
+
+void Program::set_main()
+{
+    EntryDef ed;
+    auto return_type_id{add_void_type()};
+    ed.main_id = add_function_prologue(return_type_id);
+
+        // do something here
+        for (auto layer : layers_) {
+            add_function_call(layer);
+        }
+
+    add_function_epilogue();
+
+    code_gen_.push_entry(ed);
+}
 
 void Program::add_input(const TensorType& tensor_type)
 {
@@ -33,19 +51,8 @@ void Program::add_input(const TensorType& tensor_type)
 
 }
 
-void Program::set_main()
-{
-    EntryDef ed;
-    auto return_type_id{add_void_type()};
-    ed.main_id = add_function_prologue(return_type_id);
-    add_function_epilogue();
-
-    code_gen_.push_entry(ed);
-}
-
 void Program::add_output(const TensorType& tensor_type)
 {
-    return;
     DecorateSetBindingDef deco;
     auto type_id{add_tensor_type(tensor_type)};
     auto var_id{add_var(type_id)};
@@ -350,6 +357,7 @@ id_t Program::add_function_prologue(id_t return_type_id)
     auto fn_type_id{add_function_type(return_type_id)};
     FunctionHeaderDef fh{.return_type_id = return_type_id, .function_type_id = fn_type_id, .id = alloc_id()};
 
+    global_funcs_.insert(std::make_pair(fh.id, fh));
     code_gen_.push_function(fh); 
     auto label_id{add_label()};
     return fh.id;
@@ -364,18 +372,35 @@ void Program::add_function_epilogue()
 void Program::add_gemm(const OpGemm& gemm)
 {
     auto void_type_id{add_void_type()};
-    add_function_prologue(void_type_id);
+    auto func_id{add_function_prologue(void_type_id)};
 
     auto a_id{add_const_tensor(gemm.A)} ;
     auto b_id{add_const_tensor(gemm.B)};
 
     add_function_epilogue();
+    layers_.push_back(func_id);
 }
 
 void Program::add_relu(const OpRelu& relu)
 {
     auto void_type_id{add_void_type()};
-    add_function_prologue(void_type_id);
-    
+    auto func_id{add_function_prologue(void_type_id)};
+
     add_function_epilogue();
+    layers_.push_back(func_id);
+}
+
+id_t Program::add_function_call(id_t id)
+{
+    FunctionCallDef fcd;
+    fcd.func_id = id;
+    fcd.id = alloc_id();
+    fcd.return_type_id = find_function_def(id).return_type_id;
+    code_gen_.push_function_call(fcd);
+    return fcd.id;
+}
+
+FunctionHeaderDef& Program::find_function_def(id_t id)
+{
+    return global_funcs_.at(id);
 }

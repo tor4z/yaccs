@@ -94,4 +94,11 @@ struct DecorateStructDef
     Decoration deco;
 }; // struct DecorateStructDef
 
+struct FunctionCallDef
+{
+    id_t id;
+    id_t func_id;
+    id_t return_type_id;
+}; // struct FunctionCallDef
+
 #endif // YACCS_DEF_H_

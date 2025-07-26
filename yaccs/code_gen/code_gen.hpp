@@ -27,6 +27,7 @@ struct CodeGen
     void push_const_composite(const ConstCompositeDef& ccd);
     void push_variable(const VarDef& var);
     void push_type_pointer(const TypePointerDef& tp);
+    void push_function_call(const FunctionCallDef& fcd);
     template<typename T>
     void push_const_dtype(const DTypeConstDef<T>& dconst);
 private:

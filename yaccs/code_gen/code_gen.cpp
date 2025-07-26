@@ -3,10 +3,7 @@
 #include <cstddef>
 
 
-CodeGen::CodeGen()
-{
-
-}
+CodeGen::CodeGen() {}
 
 void CodeGen::push_header()
 {
@@ -113,6 +110,11 @@ void CodeGen::push_return()
 void CodeGen::push_function_end()
 {
     fn_def_ss_ << "\tOpFunctionEnd\n";
+}
+
+void CodeGen::push_function_call(const FunctionCallDef& fcd)
+{
+    fn_def_ss_ << "\t%" << fcd.id << " = OpFunctionCall %" << fcd.return_type_id << " %" << fcd.func_id << "\n";
 }
 
 void CodeGen::push_decorate_set_binding(const DecorateSetBindingDef& deco)

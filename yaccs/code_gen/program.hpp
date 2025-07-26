@@ -1,11 +1,13 @@
 #ifndef YACCS_PROGRAM_H_
 #define YACCS_PROGRAM_H_
 
+#include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
 #include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/tensor.hpp"
 #include "yaccs/ops.hpp"
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 
@@ -20,6 +22,8 @@ struct Program
     void add_relu(const OpRelu& relu);
     void dump_ir();
 private:
+    std::vector<id_t> layers_;  // layers in order
+    std::unordered_map<id_t, FunctionHeaderDef> global_funcs_;
     std::string name_;
     CodeGen code_gen_;
 
@@ -39,6 +43,9 @@ private:
     id_t add_raw_const(DType dtype, int elem_idx, const char* data);
     template<typename T>
     id_t add_const(DType dtype, T value);
+    id_t add_function_call(id_t id);
+
+    FunctionHeaderDef& find_function_def(id_t id);
 }; // class Program
 
 template<typename T>

@@ -25,12 +25,18 @@ void Program::set_name(const std::string& name)
 void Program::set_main()
 {
     EntryDef ed;
-    auto return_type_id{add_void_type()};
-    ed.main_id = add_function_prologue(return_type_id);
+    ed.local_size_x = 4;
+    ed.local_size_y = 4;
+    ed.local_size_z = 1;
+    ed.main_id = add_function_prologue(add_void_type());
 
         // do something here
+        Scope exe_scope{SCOPE_WORKGROUP};
+        Scope mem_scope{SCOPE_WORKGROUP};
+        MemSemantic mem_semantics{MS_WORKGROUP_MEMORY | MS_ACQUIRE_RELEASE};
         for (auto layer : layers_) {
             add_function_call(layer);
+            add_control_barrier(exe_scope, mem_scope, mem_semantics);
         }
 
     add_function_epilogue();
@@ -398,6 +404,17 @@ id_t Program::add_function_call(id_t id)
     fcd.return_type_id = find_function_def(id).return_type_id;
     code_gen_.push_function_call(fcd);
     return fcd.id;
+}
+
+void Program::add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic mem_semantics)
+{
+    ControlBarrierDef cbd;
+
+    cbd.exe_scope_id = add_const(DType::DT_UINT32, static_cast<uint32_t>(exe_scope));
+    cbd.mem_scope_id = add_const(DType::DT_UINT32, static_cast<uint32_t>(mem_scope));
+    cbd.mem_semantics_id = add_const(DType::DT_UINT32, static_cast<uint32_t>(mem_semantics));
+
+    code_gen_.push_control_barrier(cbd);
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

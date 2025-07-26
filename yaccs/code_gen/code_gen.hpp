@@ -28,6 +28,7 @@ struct CodeGen
     void push_variable(const VarDef& var);
     void push_type_pointer(const TypePointerDef& tp);
     void push_function_call(const FunctionCallDef& fcd);
+    void push_control_barrier(const ControlBarrierDef& cbd);
     template<typename T>
     void push_const_dtype(const DTypeConstDef<T>& dconst);
 private:

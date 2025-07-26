@@ -2,7 +2,6 @@
 #include "yaccs/utils.hpp"
 #include "yaccs/ops.hpp"
 #include <cassert>
-#include <cstdint>
 #include <endian.h>
 #include <fstream>
 #include <iostream>

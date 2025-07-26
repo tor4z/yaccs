@@ -3,6 +3,7 @@
 
 #include "yaccs/code_gen/def.hpp"
 #include <cassert>
+#include <cstdlib>
 #include <limits>
 #include <mutex>
 
@@ -25,6 +26,24 @@ inline int shape_to_dsize(int dims, const int shape[])
         data_size *= shape[i];
     }
     return data_size;
+}
+
+template<typename T>
+inline bool value_eq(T a, T b)
+{
+    return a == b;
+}
+
+template<>
+inline bool value_eq<float>(float a, float b)
+{
+    return std::abs(a - b) < std::numeric_limits<float>::epsilon();
+}
+
+template<>
+inline bool value_eq<double>(double a, double b)
+{
+    return std::abs(a - b) < std::numeric_limits<double>::epsilon();
 }
 
 #endif // YACCS_CODE_GEN_UTILS_H_

@@ -44,6 +44,7 @@ private:
     template<typename T>
     id_t add_const(DType dtype, T value);
     id_t add_function_call(id_t id);
+    void add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic mem_semantics);
 
     FunctionHeaderDef& find_function_def(id_t id);
 }; // class Program
@@ -54,7 +55,7 @@ id_t Program::add_const(DType dtype, T value)
     static std::vector<DTypeConstDef<T>> defs{};
 
     for (auto& it: defs) {
-        if (std::abs(it.value - value) < 1.0e-6) {
+        if (value_eq(it.value, value)) {
             return it.id;
         }
     }

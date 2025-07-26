@@ -13,13 +13,14 @@ void CodeGen::push_header()
 
 void CodeGen::push_entry(const EntryDef& ed)
 {
-    entry_def_ss_ << "OpEntryPoint Fragment %" << ed.main_id << " \"main\"";
+    entry_def_ss_ << "OpEntryPoint GLCompute %" << ed.main_id << " \"main\"";
     for (auto it: ed.input_ids) {
         entry_def_ss_ << " %" << it;
     }
     entry_def_ss_ << "\n";
 
-    entry_def_ss_ << "OpExecutionMode %" << ed.main_id << " OriginUpperLeft\n";
+    entry_def_ss_ << "OpExecutionMode %" << ed.main_id << " LocalSize "
+        << ed.local_size_x << " " << ed.local_size_y << " " << ed.local_size_z << "\n";
 }
 
 void CodeGen::push_struct_decorate(const DecorateStructDef& dsd)
@@ -41,6 +42,9 @@ void CodeGen::push_dtype(DType dt, id_t id)
         break;
     case DT_INT32:
         type_const_def_ss_ << "%" << id << " = OpTypeInt 32 1\n";
+        break;
+    case DT_UINT32:
+        type_const_def_ss_ << "%" << id << " = OpTypeInt 32 0\n";
         break;
     default: assert(false && "Unsupported type");
     }
@@ -115,6 +119,12 @@ void CodeGen::push_function_end()
 void CodeGen::push_function_call(const FunctionCallDef& fcd)
 {
     fn_def_ss_ << "\t%" << fcd.id << " = OpFunctionCall %" << fcd.return_type_id << " %" << fcd.func_id << "\n";
+}
+
+void CodeGen::push_control_barrier(const ControlBarrierDef& cbd)
+{
+    fn_def_ss_ << "\t\tOpControlBarrier %"
+        << cbd.exe_scope_id << " %" << cbd.mem_scope_id << " %" << cbd.mem_semantics_id << "\n";
 }
 
 void CodeGen::push_decorate_set_binding(const DecorateSetBindingDef& deco)

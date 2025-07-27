@@ -1,8 +1,10 @@
 #ifndef YACCS_DEF_H_
 #define YACCS_DEF_H_
 
+#include "yaccs/tensor.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 using id_t = uint32_t;
@@ -43,6 +45,40 @@ enum MemSemantic : uint32_t
     MS_MAKE_VISIBLE = 0x4000,
     MS_VOLATILE = 0x8000,
 }; // enum MemSemantic
+
+
+enum StorageClass
+{
+    SC_UNIFORM_CONSTANT = 0,
+    SC_INPUT,
+    SC_UNIFORM,
+    SC_OUTPUT,
+    SC_WORKGROUP,
+    SC_CROSS_WORKGROUP,
+    SC_PRIVATE,
+    SC_FUNCTION,
+    SC_GENERIC,
+    SC_PUSH_CONSTANT,
+    SC_ATOMICCOUNTER,
+    SC_IMAGE,
+    SC_STORAGE_BUFFER,
+    SC_TILE_IMAGE_EXT,
+    SC_TILE_ATTACHMENT_QCOM,
+    SC_NODE_PAYLOAD_AMDX,
+    SC_CALLABLE_DATA_KHR,
+    SC_INCOMING_CALLABLE_DATA_KHR,
+    SC_RAY_PAYLOAD_KHR,
+    SC_HIT_ATTRIBUTE_KHR,
+    SC_INCOMING_RAYPAYLOAD_KHR,
+    SC_SHADER_RECORD_BUFFER_KHR,
+    SC_PHYSICAL_STORAGE_BUFFER,
+    SC_HIT_OBJECT_ATTRIBUTE_NV,
+    SC_TASK_PAYLOAD_WORKGROUP_EXT,
+    SC_CODE_SECTION_INTEL,
+    SC_DEVICE_ONLY_INTEL,
+    SC_HOST_ONLY_INTEL,
+    SC_NONE,
+}; // enum StorageClass
 
 struct ArrTypeDef {
     int length;
@@ -88,12 +124,14 @@ struct VarDef
 {
     id_t id;
     id_t type_pointer_id;
+    StorageClass storage_class;
 }; // struct VarDef
 
 struct TypePointerDef
 {
     id_t id;
     id_t type_id;
+    StorageClass storage_class;
 }; // struct TypePointerDef
 
 struct EntryDef
@@ -112,6 +150,11 @@ struct DecorateSetBindingDef
     int binding;
     int set;
 }; // struct SetBindingDef
+
+struct DecorateArrayDef
+{
+    id_t array_type_id;
+}; // struct DecorateArrayDef
 
 struct DecorateStructDef
 {
@@ -139,5 +182,15 @@ struct ControlBarrierDef
     id_t mem_scope_id;
     id_t mem_semantics_id;
 }; // struct ControlBarrierDef
+
+struct TensorMeta
+{
+    std::string name;
+    int shape[MAX_TENSOR_DIMS];
+    int dims;
+    id_t tensor_id;
+    id_t dtype_id;
+    id_t dtype_pointer_id;
+}; // struct TensorMeta
 
 #endif // YACCS_DEF_H_

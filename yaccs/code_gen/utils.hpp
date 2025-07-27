@@ -46,4 +46,14 @@ inline bool value_eq<double>(double a, double b)
     return std::abs(a - b) < std::numeric_limits<double>::epsilon();
 }
 
+inline bool should_decorate(StorageClass sc)
+{
+    switch (sc) {
+    case SC_UNIFORM:    return true;
+    default:            return false;
+    }
+}
+
+const std::string& as_string(StorageClass sc);
+
 #endif // YACCS_CODE_GEN_UTILS_H_

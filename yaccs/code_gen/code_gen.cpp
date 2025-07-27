@@ -1,4 +1,5 @@
 #include "yaccs/code_gen/code_gen.hpp"
+#include "yaccs/code_gen/utils.hpp"
 #include <cassert>
 #include <cstddef>
 
@@ -29,6 +30,11 @@ void CodeGen::push_struct_decorate(const DecorateStructDef& dsd)
     for (const auto& it : dsd.member_deco) {
         decorate_ss_ << "OpMemberDecorate %" << dsd.struct_type_id << " " << it.field << " Offset " << it.offset << "\n";
     }
+}
+
+void CodeGen::push_array_decorate(const DecorateArrayDef& dad)
+{
+    decorate_ss_ << "OpDecorate %" << dad.array_type_id << " ArrayStride 16\n";
 }
 
 void CodeGen::push_dtype(DType dt, id_t id)
@@ -86,12 +92,14 @@ void CodeGen::push_const_composite(const ConstCompositeDef& ccd)
 
 void CodeGen::push_type_pointer(const TypePointerDef& tp)
 {
-    type_const_def_ss_ << "%" << tp.id << " = OpTypePointer Uniform %" << tp.type_id << "\n";
+    type_const_def_ss_ << "%" << tp.id << " = OpTypePointer "
+        << as_string(tp.storage_class) << " %" << tp.type_id << "\n";
 }
 
 void CodeGen::push_variable(const VarDef& var)
 {
-    type_const_def_ss_ << "%" << var.id << " = OpVariable %" << var.type_pointer_id << " Uniform\n";
+    type_const_def_ss_ << "%" << var.id << " = OpVariable %" << var.type_pointer_id
+        << " " << as_string(var.storage_class) << "\n";
 }
 
 void CodeGen::push_function(const FunctionHeaderDef& fh)

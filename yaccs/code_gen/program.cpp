@@ -2,6 +2,8 @@
 #include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
 #include "yaccs/dtype.hpp"
+#include "yaccs/tensor.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <unordered_map>
 #include <cassert>
@@ -30,7 +32,6 @@ void Program::set_main()
     ed.local_size_z = 1;
     ed.main_id = add_function_prologue(add_void_type());
 
-        // do something here
         Scope exe_scope{SCOPE_WORKGROUP};
         Scope mem_scope{SCOPE_WORKGROUP};
         MemSemantic mem_semantics{MS_WORKGROUP_MEMORY | MS_ACQUIRE_RELEASE};
@@ -47,21 +48,20 @@ void Program::set_main()
 void Program::add_input(const TensorType& tensor_type)
 {
     DecorateSetBindingDef deco;
-    auto type_id{add_tensor_type(tensor_type)};
-    auto var_id{add_var(type_id)};
+    auto type_id{add_tensor_type(tensor_type, SC_UNIFORM)};
+    auto var_id{add_var(type_id, SC_UNIFORM)};
 
     deco.binding = 0;
     deco.set = 0;
     deco.target = var_id;
     code_gen_.push_decorate_set_binding(deco);
-
 }
 
 void Program::add_output(const TensorType& tensor_type)
 {
     DecorateSetBindingDef deco;
-    auto type_id{add_tensor_type(tensor_type)};
-    auto var_id{add_var(type_id)};
+    auto type_id{add_tensor_type(tensor_type, SC_UNIFORM)};
+    auto var_id{add_var(type_id, SC_UNIFORM)};
 
     deco.binding = 0;
     deco.set = 1;
@@ -87,28 +87,33 @@ id_t Program::add_dtype(DType dtype)
     return defs_.at(dtype);
 }
 
-id_t Program::add_type_pointer(id_t type_id)
+id_t Program::add_type_pointer(id_t type_id, StorageClass sc)
 {
-    static std::unordered_map<id_t, TypePointerDef> dfs;
+    static std::vector<TypePointerDef> dfs;
 
-    if (dfs.find(type_id) != dfs.end()) {
-        return dfs.at(type_id).id;
+    for (size_t i = 0; i < dfs.size(); ++i) {
+        const auto& df{dfs.at(i)};
+        if (df.id == type_id && df.storage_class == sc) {
+            return df.id;
+        }
     }
 
     TypePointerDef tpd;
     tpd.type_id = type_id;
     tpd.id  = alloc_id();
-    dfs.insert(std::make_pair(type_id, tpd));
+    tpd.storage_class = sc;
+    dfs.push_back(tpd);
     code_gen_.push_type_pointer(tpd);
 
     return tpd.id;
 }
 
-id_t Program::add_var(id_t type_id)
+id_t Program::add_var(id_t type_id, StorageClass sc)
 {
     VarDef vd;
     vd.id = alloc_id();
-    vd.type_pointer_id = add_type_pointer(type_id);
+    vd.storage_class = sc;
+    vd.type_pointer_id = add_type_pointer(type_id, sc);
     code_gen_.push_variable(vd);
     return vd.id;
 }
@@ -139,49 +144,81 @@ id_t Program::add_struct_dtype(const std::vector<id_t>& dtypes)
     return std.id;
 }
 
-id_t Program::add_array_dtype(id_t dtype, int length)
+id_t Program::add_array_dtype(id_t dtype, int length, StorageClass sc)
 {
     static std::vector<ArrTypeDef> defs;
+    static std::vector<DecorateArrayDef> decos;
 
+    DecorateArrayDef this_deco;
+    auto already_decorate_in{[&this_deco] (const std::vector<DecorateArrayDef>& targets) -> bool {
+        for (const auto& it : targets) {
+            if (it.array_type_id == this_deco.array_type_id) {
+                return true;
+            }
+        }
+        return false;
+    }};
+
+    id_t array_type_id{};
+    bool should_create_array_type{true};
     for (const auto& it : defs) {
         if (it.dtype == dtype && it.length == length) {
-            return it.id;
+            array_type_id = it.id;
+            should_create_array_type = false;
         }
     }
 
-    id_t length_id{add_const(DT_INT32, length)};
-    ArrTypeDef arr{.length = length, .dtype = dtype, .length_id = length_id, .id = alloc_id()};
-    defs.push_back(arr);
-    code_gen_.push_array_dtype(arr);
-    return arr.id;
+    if (should_create_array_type) {
+        id_t length_id{add_const(DT_INT32, length)};
+        ArrTypeDef arr{.length = length, .dtype = dtype, .length_id = length_id, .id = alloc_id()};
+        array_type_id = arr.id;
+
+        defs.push_back(arr);
+        code_gen_.push_array_dtype(arr);
+    }
+
+    this_deco.array_type_id = array_type_id;
+    if (should_decorate(sc) && !already_decorate_in(decos)) {
+        code_gen_.push_array_decorate(this_deco);
+        decos.push_back(this_deco);
+    }
+
+    return array_type_id;
 }
 
-id_t Program::add_tensor_type(const TensorType& tensor_type)
+id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc)
 {
     /*
      * {
      *     int dims;
-     *     int shape[0];
-     *     int shape[1];
-     *     int shape[...];
-     *     DType data[0];
-     *     DType data[1];
-     *     DType data[...];
+     *     int shape[MAX_TENSOR_DIMS];
+     *     DType data[num_elems];
      * }
      */
 
     static std::vector<DecorateStructDef> decos;
 
+    int num_elems{1};
+    for (int i = 0; i < tensor_type.dims; ++i) {
+        num_elems *= tensor_type.shape[i];
+    }
+
+    auto dtype_id{add_dtype(tensor_type.dtype)};    // define type dtype
+    auto int_id{add_dtype(DT_INT32)};               // define int type
+    auto shape_id{add_array_dtype(int_id, MAX_TENSOR_DIMS, sc)};
+    auto data_id{add_array_dtype(dtype_id, num_elems, sc)};
+
     uint32_t offset{0};
     uint32_t field_idx{0};
-    int num_elems{1};
     DecorateStructDef dsd;
-    auto type_id{add_dtype(tensor_type.dtype)}; // define type dtype
-    auto dt_int{add_dtype(DT_INT32)};           // define int type
+
     std::vector<id_t> struct_ids;
-    struct_ids.push_back(dt_int);
+    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 16;
+    struct_ids.push_back(int_id);   // dims
+    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 16 * MAX_TENSOR_DIMS; 
+    struct_ids.push_back(shape_id); // shape
     dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
-    offset += 4;
+    struct_ids.push_back(data_id);  // data
 
     auto already_decorate_in{[&dsd] (const std::vector<DecorateStructDef>& targets) -> bool {
         for (const auto& it : targets) {
@@ -190,30 +227,16 @@ id_t Program::add_tensor_type(const TensorType& tensor_type)
         return false;
     }};
 
-    for (int i = 0; i < tensor_type.dims; ++i) {
-        struct_ids.push_back(dt_int);
-        num_elems *= tensor_type.shape[i];
-        dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
-        offset += 4;
-    }
-
-    const auto data_member_bytes{dtype_bytes(tensor_type.dtype)};
-    for (int i = 0; i < num_elems; ++i) {
-        struct_ids.push_back(type_id);
-        dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
-        offset += data_member_bytes;
-    }
-    auto struct_type_id{add_struct_dtype(struct_ids)};
-
+    auto tensor_type_id{add_struct_dtype(struct_ids)};
     dsd.deco = DECO_BLOCK;
-    dsd.struct_type_id = struct_type_id;
+    dsd.struct_type_id = tensor_type_id;
 
-    if (!already_decorate_in(decos)) {
+    if (should_decorate(sc) && !already_decorate_in(decos)) {
         decos.push_back(dsd);
         code_gen_.push_struct_decorate(dsd);
     }
 
-    return struct_type_id;
+    return tensor_type_id;
 }
 
 id_t Program::add_const_array(id_t arr_type, const std::vector<id_t>& elem_ids)
@@ -245,25 +268,32 @@ id_t Program::add_const_tensor(const Tensor& tensor)
 {
     static std::vector<ConstCompositeDef> dfs;
 
-    int num_elems{1};
     ConstCompositeDef sd;
-    auto tensor_type_id{add_tensor_type(tensor.tt)};
+    auto tensor_type_id{add_tensor_type(tensor.tt, SC_NONE)};
     sd.type_id = tensor_type_id;
 
     // setup dims
     sd.elem_ids.push_back(add_const(DT_INT32, tensor.tt.dims));
 
     // setup shape
-    for (int i = 0; i < tensor.tt.dims; ++i) {
-        num_elems *= tensor.tt.shape[i];
-        sd.elem_ids.push_back(add_const(DT_INT32, tensor.tt.shape[i]));
+    int num_elems{1};
+    std::vector<id_t> shape(MAX_TENSOR_DIMS);
+    for (int i = 0; i < MAX_TENSOR_DIMS; ++i) {
+        num_elems *= i < tensor.tt.dims ? tensor.tt.shape[i] : 1;
+        shape.at(i) = add_const(DT_INT32, i < tensor.tt.dims ? tensor.tt.shape[i] : 0);
     }
+    auto int_id{add_dtype(DT_INT32)};
+    auto shape_id{add_array_dtype(int_id, MAX_TENSOR_DIMS, SC_NONE)};
+    sd.elem_ids.push_back(add_const_array(shape_id, shape));
 
     // setup data
+    std::vector<id_t> data(num_elems);
     for (int i = 0; i < num_elems; ++i) {
-        const auto const_id{add_raw_const(tensor.tt.dtype, i, tensor.data.data())};
-        sd.elem_ids.push_back(const_id);
+        data.at(i) = add_raw_const(tensor.tt.dtype, i, tensor.data.data());
     }
+    auto dtype_id{add_dtype(tensor.tt.dtype)};
+    auto data_id{add_array_dtype(dtype_id, num_elems, SC_NONE)};
+    sd.elem_ids.push_back(add_const_array(data_id, data));
 
     auto const_struct_matched{[&sd] (const ConstCompositeDef& target) -> bool {
         if (target.type_id != sd.type_id) {
@@ -283,6 +313,16 @@ id_t Program::add_const_tensor(const Tensor& tensor)
     code_gen_.push_const_composite(sd);
     return sd.id;
 }
+
+id_t Program::add_shared_tensor(const Tensor& tensor)
+{
+    // auto tensor_type_id{add_tensor_type(tensor.tt, SC_SHA)};
+    // auto tensor_type_pointer_id{add_type_pointer(tensor_type_id, SC_WORKGROUP)};
+    return 1;
+    // code_gen_.push_shared_data();
+    // return sd.id;
+}
+
 
 id_t Program::add_raw_const(DType dtype, int elem_idx, const char* data)
 {
@@ -380,8 +420,9 @@ void Program::add_gemm(const OpGemm& gemm)
     auto void_type_id{add_void_type()};
     auto func_id{add_function_prologue(void_type_id)};
 
-    auto a_id{add_const_tensor(gemm.A)} ;
-    auto b_id{add_const_tensor(gemm.B)};
+        auto b_id{add_const_tensor(gemm.B)};
+        auto c_id{add_const_tensor(gemm.C)};
+        auto y_id{add_shared_tensor(gemm.Y)};
 
     add_function_epilogue();
     layers_.push_back(func_id);

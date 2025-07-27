@@ -79,10 +79,10 @@ void gemm_from_onnx(const onnx::NodeProto& node, const onnx::GraphProto& graph, 
         for (const auto& it : graph.initializer()) {
             if (input.compare(it.name()) == 0) {
                 tensor_from_onnx(it, tensors[idx]);
-                ++idx;
                 break;
             }
         }
+        ++idx;
     }
 
     assert(node.output().size() == 1 && "Bad num of output for Gemm");

@@ -11,9 +11,10 @@ using id_t = uint32_t;
 
 enum Decoration
 {
-    DECO_RELAXEDPRECISION = 1,
+    DECO_RELAXED_PRECISION = 1,
     DECO_SPECID,
     DECO_BLOCK,
+    DECO_NONE,
 }; // enum Decoration
 
 enum Scope : uint32_t
@@ -81,7 +82,7 @@ enum StorageClass
 }; // enum StorageClass
 
 struct ArrTypeDef {
-    int length;
+    uint32_t length;
     id_t dtype;
     id_t length_id;
     id_t id;

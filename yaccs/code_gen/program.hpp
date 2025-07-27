@@ -33,13 +33,13 @@ private:
     id_t add_void_type();
     id_t add_label();
     id_t add_function_type(id_t return_type_id);
-    id_t add_struct_dtype(const std::vector<id_t>& dtypes);
-    id_t add_array_dtype(id_t dtype, int length, StorageClass sc);
+    id_t add_struct_dtype(const std::vector<id_t>& dtypes, bool reuse=true);
+    id_t add_array_dtype(id_t dtype, uint32_t length, StorageClass sc, bool reuse=true);
     id_t add_const_array(id_t arr_type, const std::vector<id_t>& elem_ids);
     id_t add_dtype(DType dtype);
     id_t add_const_tensor(const Tensor& tensor);
     id_t add_shared_tensor(const Tensor& tensor);
-    id_t add_tensor_type(const TensorType& tensor_type, StorageClass sc);
+    id_t add_tensor_type(const TensorType& tensor_type, StorageClass sc, bool reuse=true);
     id_t add_type_pointer(id_t type_id, StorageClass sc);
     id_t add_var(id_t type_id, StorageClass sc);
     id_t add_raw_const(DType dtype, int elem_idx, const char* data);

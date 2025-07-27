@@ -1,4 +1,5 @@
 #include "yaccs/code_gen/code_gen.hpp"
+#include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
 #include <cassert>
 #include <cstddef>
@@ -26,7 +27,10 @@ void CodeGen::push_entry(const EntryDef& ed)
 
 void CodeGen::push_struct_decorate(const DecorateStructDef& dsd)
 {
-    decorate_ss_ << "OpDecorate %" << dsd.struct_type_id << " Block\n";
+    if (dsd.deco != DECO_NONE) {
+        decorate_ss_ <<  "OpDecorate %" << dsd.struct_type_id << " " << as_string(dsd.deco) << "\n";
+    }
+
     for (const auto& it : dsd.member_deco) {
         decorate_ss_ << "OpMemberDecorate %" << dsd.struct_type_id << " " << it.field << " Offset " << it.offset << "\n";
     }

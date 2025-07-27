@@ -47,26 +47,62 @@ void Program::set_main()
 
 void Program::add_input(const TensorType& tensor_type)
 {
-    DecorateSetBindingDef deco;
-    auto type_id{add_tensor_type(tensor_type, SC_UNIFORM)};
-    auto var_id{add_var(type_id, SC_UNIFORM)};
+    DecorateSetBindingDef binding_deco;
+    DecorateStructDef struct_deco;
+    auto storage_type{SC_UNIFORM};
 
-    deco.binding = 0;
-    deco.set = 0;
-    deco.target = var_id;
-    code_gen_.push_decorate_set_binding(deco);
+    auto type_id{add_tensor_type(tensor_type, storage_type, false)};
+    auto input_tensor_type{add_struct_dtype({type_id}, false)};
+    auto var_id{add_var(input_tensor_type, storage_type)};
+
+    struct_deco.deco = DECO_BLOCK;
+    struct_deco.struct_type_id = input_tensor_type;
+    struct_deco.member_deco.push_back(DecorateStructDef::FieldOffset{.field = 0, .offset = 0});
+    code_gen_.push_struct_decorate(struct_deco);
+
+    binding_deco.binding = 0;
+    binding_deco.set = 0;
+    binding_deco.target = var_id;
+    code_gen_.push_decorate_set_binding(binding_deco);
+
+    TensorMeta tm;
+    tm.name = tensor_type.name;
+    tm.dims = tensor_type.dims;
+    tm.tensor_id = var_id;
+    tm.dtype_id = add_dtype(tensor_type.dtype);
+    tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_type);
+    memcpy(tm.shape, tensor_type.shape, sizeof(tensor_type.shape[0]) * MAX_TENSOR_DIMS);
+    global_tensors_.insert(std::make_pair(tensor_type.name, tm));
 }
 
 void Program::add_output(const TensorType& tensor_type)
 {
-    DecorateSetBindingDef deco;
-    auto type_id{add_tensor_type(tensor_type, SC_UNIFORM)};
-    auto var_id{add_var(type_id, SC_UNIFORM)};
+    DecorateSetBindingDef binding_deco;
+    DecorateStructDef struct_deco;
+    auto storage_type{SC_UNIFORM};
 
-    deco.binding = 0;
-    deco.set = 1;
-    deco.target = var_id;
-    code_gen_.push_decorate_set_binding(deco);
+    auto type_id{add_tensor_type(tensor_type, storage_type, false)};
+    auto output_tensor_type{add_struct_dtype({type_id}, false)};
+    auto var_id{add_var(output_tensor_type, storage_type)};
+
+    struct_deco.deco = DECO_BLOCK;
+    struct_deco.struct_type_id = output_tensor_type;
+    struct_deco.member_deco.push_back(DecorateStructDef::FieldOffset{.field = 0, .offset = 0});
+    code_gen_.push_struct_decorate(struct_deco);
+
+    binding_deco.binding = 0;
+    binding_deco.set = 1;
+    binding_deco.target = var_id;
+    code_gen_.push_decorate_set_binding(binding_deco);
+
+    TensorMeta tm;
+    tm.name = tensor_type.name;
+    tm.dims = tensor_type.dims;
+    tm.tensor_id = var_id;
+    tm.dtype_id = add_dtype(tensor_type.dtype);
+    tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_type);
+    memcpy(tm.shape, tensor_type.shape, sizeof(tensor_type.shape[0]) * MAX_TENSOR_DIMS);
+    global_tensors_.insert(std::make_pair(tensor_type.name, tm));
 }
 
 void Program::dump_ir()
@@ -118,7 +154,7 @@ id_t Program::add_var(id_t type_id, StorageClass sc)
     return vd.id;
 }
 
-id_t Program::add_struct_dtype(const std::vector<id_t>& dtypes)
+id_t Program::add_struct_dtype(const std::vector<id_t>& dtypes, bool reuse)
 {
     static std::vector<StructTypeDef> defs;
 
@@ -130,21 +166,25 @@ id_t Program::add_struct_dtype(const std::vector<id_t>& dtypes)
         return true;
     }};
 
-    for (const auto& it : defs) {
-        if (struct_match(it)) {
-            return it.id;
+    if (reuse) {
+        for (const auto& it : defs) {
+            if (struct_match(it)) {
+                return it.id;
+            }
         }
     }
 
     StructTypeDef std{.id = alloc_id(), .num_fields = dtypes.size()};
     std.fields.resize(std.num_fields);
     memcpy(std.fields.data(), dtypes.data(), sizeof(std.fields[0]) * std.num_fields);
-    defs.push_back(std);
+    if (reuse) {
+        defs.push_back(std);
+    }
     code_gen_.push_struct_dtype(std);
     return std.id;
 }
 
-id_t Program::add_array_dtype(id_t dtype, int length, StorageClass sc)
+id_t Program::add_array_dtype(id_t dtype, uint32_t length, StorageClass sc, bool reuse)
 {
     static std::vector<ArrTypeDef> defs;
     static std::vector<DecorateArrayDef> decos;
@@ -161,19 +201,24 @@ id_t Program::add_array_dtype(id_t dtype, int length, StorageClass sc)
 
     id_t array_type_id{};
     bool should_create_array_type{true};
-    for (const auto& it : defs) {
-        if (it.dtype == dtype && it.length == length) {
-            array_type_id = it.id;
-            should_create_array_type = false;
+    if (reuse) {
+        for (const auto& it : defs) {
+            if (it.dtype == dtype && it.length == length) {
+                array_type_id = it.id;
+                should_create_array_type = false;
+                break;
+            }
         }
     }
 
     if (should_create_array_type) {
-        id_t length_id{add_const(DT_INT32, length)};
+        id_t length_id{add_const(DT_UINT32, length)};
         ArrTypeDef arr{.length = length, .dtype = dtype, .length_id = length_id, .id = alloc_id()};
         array_type_id = arr.id;
 
-        defs.push_back(arr);
+        if (reuse) {
+            defs.push_back(arr);   
+        }
         code_gen_.push_array_dtype(arr);
     }
 
@@ -186,7 +231,7 @@ id_t Program::add_array_dtype(id_t dtype, int length, StorageClass sc)
     return array_type_id;
 }
 
-id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc)
+id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc, bool reuse)
 {
     /*
      * {
@@ -205,8 +250,8 @@ id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc)
 
     auto dtype_id{add_dtype(tensor_type.dtype)};    // define type dtype
     auto int_id{add_dtype(DT_INT32)};               // define int type
-    auto shape_id{add_array_dtype(int_id, MAX_TENSOR_DIMS, sc)};
-    auto data_id{add_array_dtype(dtype_id, num_elems, sc)};
+    auto shape_id{add_array_dtype(int_id, MAX_TENSOR_DIMS, sc, reuse)};
+    auto data_id{add_array_dtype(dtype_id, num_elems, sc, reuse)};
 
     uint32_t offset{0};
     uint32_t field_idx{0};
@@ -227,8 +272,8 @@ id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc)
         return false;
     }};
 
-    auto tensor_type_id{add_struct_dtype(struct_ids)};
-    dsd.deco = DECO_BLOCK;
+    auto tensor_type_id{add_struct_dtype(struct_ids, reuse)};
+    dsd.deco = DECO_NONE;
     dsd.struct_type_id = tensor_type_id;
 
     if (should_decorate(sc) && !already_decorate_in(decos)) {
@@ -302,25 +347,52 @@ id_t Program::add_const_tensor(const Tensor& tensor)
         return sd.elem_ids == target.elem_ids;
     }};
 
+    bool should_create_const_tensor{true};
     for (const auto& it : dfs) {
         if (const_struct_matched(it)) {
-            return it.id;
+            sd.id = it.id;
+            should_create_const_tensor = false;
+            break;
         }
     }
 
-    sd.id = alloc_id();
-    dfs.push_back(sd);
-    code_gen_.push_const_composite(sd);
+    if (should_create_const_tensor) {
+        sd.id = alloc_id();
+        dfs.push_back(sd);
+        code_gen_.push_const_composite(sd);
+    }
+
+    TensorMeta tm;
+    tm.name = tensor.tt.name;
+    tm.dims = tensor.tt.dims;
+    tm.tensor_id = sd.id;
+    tm.dtype_id = add_dtype(tensor.tt.dtype);
+    memcpy(tm.shape, tensor.tt.shape, sizeof(tensor.tt.shape[0]) * MAX_TENSOR_DIMS);
+    global_tensors_.insert(std::make_pair(tensor.tt.name, tm));
+
     return sd.id;
 }
 
 id_t Program::add_shared_tensor(const Tensor& tensor)
 {
-    // auto tensor_type_id{add_tensor_type(tensor.tt, SC_SHA)};
-    // auto tensor_type_pointer_id{add_type_pointer(tensor_type_id, SC_WORKGROUP)};
-    return 1;
-    // code_gen_.push_shared_data();
-    // return sd.id;
+    auto storage_class{SC_WORKGROUP};
+    auto tensor_type_id{add_tensor_type(tensor.tt, storage_class)};
+
+    VarDef vd;
+    vd.type_pointer_id = add_type_pointer(tensor_type_id, storage_class);
+    vd.storage_class = storage_class;
+    vd.id = alloc_id();
+    code_gen_.push_variable(vd);
+
+    TensorMeta tm;
+    tm.name = tensor.tt.name;
+    tm.dims = tensor.tt.dims;
+    tm.tensor_id = vd.id;
+    tm.dtype_id = add_dtype(tensor.tt.dtype);
+    memcpy(tm.shape, tensor.tt.shape, sizeof(tensor.tt.shape[0]) * MAX_TENSOR_DIMS);
+    global_tensors_.insert(std::make_pair(tensor.tt.name, tm));
+
+    return vd.id;
 }
 
 

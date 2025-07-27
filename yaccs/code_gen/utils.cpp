@@ -68,3 +68,19 @@ const std::string& as_string(StorageClass sc)
 
     return uniform_constant; // unreachable, return something to suppress compiler warning
 }
+
+const std::string& as_string(Decoration deco)
+{
+    static const std::string relaxed_precision{"RelaxedPrecision"};
+    static const std::string specid{"SpecId"};
+    static const std::string block{"Block"};   
+
+    switch (deco) {
+    case DECO_RELAXED_PRECISION:    return relaxed_precision;
+    case DECO_SPECID:               return specid;
+    case DECO_BLOCK:                return block;
+    default:                        assert(false && "Unreachable");
+    }
+
+    return relaxed_precision; // unreachable, return something to suppress compiler warning
+}

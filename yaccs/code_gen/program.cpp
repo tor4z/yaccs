@@ -35,9 +35,12 @@ void Program::set_main()
         Scope exe_scope{SCOPE_WORKGROUP};
         Scope mem_scope{SCOPE_WORKGROUP};
         MemSemantic mem_semantics{MS_WORKGROUP_MEMORY | MS_ACQUIRE_RELEASE};
-        for (auto layer : layers_) {
+        for (size_t i = 0; i < layers_.size(); ++i) {
+            auto layer{layers_.at(i)};
             add_function_call(layer);
-            add_control_barrier(exe_scope, mem_scope, mem_semantics);
+            if (i < layers_.size() - 1) {
+                add_control_barrier(exe_scope, mem_scope, mem_semantics);
+            }
         }
 
     add_function_epilogue();

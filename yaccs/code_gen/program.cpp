@@ -55,7 +55,7 @@ void Program::add_input(const TensorType& tensor_type)
     auto input_tensor_type{add_struct_dtype({type_id}, false)};
     auto var_id{add_var(input_tensor_type, storage_type)};
 
-    struct_deco.deco = DECO_BLOCK;
+    struct_deco.deco = DECO_BUFFER_BLOCK;
     struct_deco.struct_type_id = input_tensor_type;
     struct_deco.member_deco.push_back(DecorateStructDef::FieldOffset{.field = 0, .offset = 0});
     code_gen_.push_struct_decorate(struct_deco);
@@ -85,7 +85,7 @@ void Program::add_output(const TensorType& tensor_type)
     auto output_tensor_type{add_struct_dtype({type_id}, false)};
     auto var_id{add_var(output_tensor_type, storage_type)};
 
-    struct_deco.deco = DECO_BLOCK;
+    struct_deco.deco = DECO_BUFFER_BLOCK;
     struct_deco.struct_type_id = output_tensor_type;
     struct_deco.member_deco.push_back(DecorateStructDef::FieldOffset{.field = 0, .offset = 0});
     code_gen_.push_struct_decorate(struct_deco);

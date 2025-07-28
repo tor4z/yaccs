@@ -14,6 +14,7 @@ enum Decoration
     DECO_RELAXED_PRECISION = 1,
     DECO_SPECID,
     DECO_BLOCK,
+    DECO_BUFFER_BLOCK,
     DECO_NONE,
 }; // enum Decoration
 

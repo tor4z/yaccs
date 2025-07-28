@@ -1,6 +1,7 @@
 #ifndef YACCS_DEF_H_
 #define YACCS_DEF_H_
 
+#include "yaccs/dtype.hpp"
 #include "yaccs/tensor.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -190,6 +191,7 @@ struct TensorMeta
     std::string name;
     int shape[MAX_TENSOR_DIMS];
     int dims;
+    DType dtype;
     id_t tensor_id;
     id_t dtype_id;
     id_t dtype_pointer_id;

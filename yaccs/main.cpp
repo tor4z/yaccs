@@ -32,6 +32,7 @@ int main(int argc, char** argv)
     for (const auto& it : model.graph().input()) {
         if (it.type().has_tensor_type()) {
             TensorType tt{};
+            tt.name = it.name();
             tensor_type_from_onnx(it.type().tensor_type(), tt, input_dynamic_axes);
             program.add_input(tt);
         }
@@ -40,6 +41,7 @@ int main(int argc, char** argv)
     for (const auto& it : model.graph().output()) {
         if (it.type().has_tensor_type()) {
             TensorType tt{};
+            tt.name = it.name();
             tensor_type_from_onnx(it.type().tensor_type(), tt, output_dynamic_axes);
             program.add_output(tt);
         }

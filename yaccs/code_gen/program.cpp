@@ -71,6 +71,7 @@ void Program::add_input(const TensorType& tensor_type)
     TensorMeta tm;
     tm.name = tensor_type.name;
     tm.dims = tensor_type.dims;
+    tm.dtype = tensor_type.dtype;
     tm.tensor_id = var_id;
     tm.dtype_id = add_dtype(tensor_type.dtype);
     tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_type);
@@ -101,6 +102,7 @@ void Program::add_output(const TensorType& tensor_type)
     TensorMeta tm;
     tm.name = tensor_type.name;
     tm.dims = tensor_type.dims;
+    tm.dtype = tensor_type.dtype;
     tm.tensor_id = var_id;
     tm.dtype_id = add_dtype(tensor_type.dtype);
     tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_type);
@@ -368,6 +370,7 @@ id_t Program::add_const_tensor(const Tensor& tensor)
     TensorMeta tm;
     tm.name = tensor.tt.name;
     tm.dims = tensor.tt.dims;
+    tm.dtype = tensor.tt.dtype;
     tm.tensor_id = sd.id;
     tm.dtype_id = add_dtype(tensor.tt.dtype);
     memcpy(tm.shape, tensor.tt.shape, sizeof(tensor.tt.shape[0]) * MAX_TENSOR_DIMS);
@@ -390,6 +393,7 @@ id_t Program::add_shared_tensor(const Tensor& tensor)
     TensorMeta tm;
     tm.name = tensor.tt.name;
     tm.dims = tensor.tt.dims;
+    tm.dtype = tensor.tt.dtype;
     tm.tensor_id = vd.id;
     tm.dtype_id = add_dtype(tensor.tt.dtype);
     memcpy(tm.shape, tensor.tt.shape, sizeof(tensor.tt.shape[0]) * MAX_TENSOR_DIMS);
@@ -496,10 +500,10 @@ void Program::add_gemm(const OpGemm& gemm)
         add_const_tensor(gemm.C);
         add_shared_tensor(gemm.Y);
 
-        // const auto& A{global_tensors_.at(gemm.A.tt.name)};
-        // const auto& B{global_tensors_.at(gemm.B.tt.name)};
-        // const auto& C{global_tensors_.at(gemm.C.tt.name)};
-        // const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
+        const auto& A{global_tensors_.at(gemm.A.tt.name)};
+        const auto& B{global_tensors_.at(gemm.B.tt.name)};
+        const auto& C{global_tensors_.at(gemm.C.tt.name)};
+        const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
 
     add_function_epilogue();
     layers_.push_back(func_id);
@@ -509,6 +513,20 @@ void Program::add_relu(const OpRelu& relu)
 {
     auto void_type_id{add_void_type()};
     auto func_id{add_function_prologue(void_type_id)};
+
+        const auto& X{global_tensors_.at(relu.X.tt.name)};
+        // infer Y from X
+        Tensor tensor_Y;
+        tensor_Y.tt.name = relu.Y.tt.name;
+        tensor_Y.tt.dims = X.dims;
+        tensor_Y.tt.dtype = X.dtype;
+        tensor_Y.tt.row_major = true;
+        memcpy(tensor_Y.tt.shape, X.shape, MAX_TENSOR_DIMS * sizeof(X.shape[0]));
+        add_shared_tensor(tensor_Y);
+        const auto& Y{global_tensors_.at(relu.Y.tt.name)};
+        
+        // define relu operation
+
 
     add_function_epilogue();
     layers_.push_back(func_id);

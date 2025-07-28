@@ -42,7 +42,7 @@ private:
     id_t add_tensor_type(const TensorType& tensor_type, StorageClass sc, bool reuse=true);
     id_t add_type_pointer(id_t type_id, StorageClass sc);
     id_t add_var(id_t type_id, StorageClass sc);
-    id_t add_raw_const(DType dtype, int elem_idx, const char* data);
+    id_t add_raw_const(DType dtype, int elem_idx, const Tensor& tensor);
     template<typename T>
     id_t add_const(DType dtype, T value);
     id_t add_function_call(id_t id);

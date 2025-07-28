@@ -337,7 +337,7 @@ id_t Program::add_const_tensor(const Tensor& tensor)
     // setup data
     std::vector<id_t> data(num_elems);
     for (int i = 0; i < num_elems; ++i) {
-        data.at(i) = add_raw_const(tensor.tt.dtype, i, tensor.data.data());
+        data.at(i) = add_raw_const(tensor.tt.dtype, i, tensor);
     }
     auto dtype_id{add_dtype(tensor.tt.dtype)};
     auto data_id{add_array_dtype(dtype_id, num_elems, SC_NONE)};
@@ -399,16 +399,10 @@ id_t Program::add_shared_tensor(const Tensor& tensor)
 }
 
 
-id_t Program::add_raw_const(DType dtype, int elem_idx, const char* data)
+id_t Program::add_raw_const(DType dtype, int elem_idx, const Tensor& tensor)
 {
-    id_t id{0};
     switch (dtype) {
-        case DT_FLOAT:
-        {
-            auto raw{le32toh(*reinterpret_cast<const uint32_t*>(data + elem_idx * DT_FLOAT_BYTES))};
-            float f{*reinterpret_cast<float*>(&raw)};
-            id = add_const(dtype, f);
-        } break;
+        case DT_FLOAT: return add_const(dtype, tensor.at<DT_FLOAT>(elem_idx));
         case DT_UINT8:
         case DT_INT8:
         case DT_UINT16:
@@ -436,7 +430,8 @@ id_t Program::add_raw_const(DType dtype, int elem_idx, const char* data)
             assert(false && "Unrecognized data type");
     }
 
-    return id;
+    assert(false && "Unreachable");
+    return 0;
 }
 
 id_t Program::add_void_type()
@@ -495,9 +490,16 @@ void Program::add_gemm(const OpGemm& gemm)
     auto void_type_id{add_void_type()};
     auto func_id{add_function_prologue(void_type_id)};
 
-        auto b_id{add_const_tensor(gemm.B)};
-        auto c_id{add_const_tensor(gemm.C)};
-        auto y_id{add_shared_tensor(gemm.Y)};
+        const auto alpha{gemm.alpha};
+        const auto beta{gemm.beta};
+        add_const_tensor(gemm.B);
+        add_const_tensor(gemm.C);
+        add_shared_tensor(gemm.Y);
+
+        // const auto& A{global_tensors_.at(gemm.A.tt.name)};
+        // const auto& B{global_tensors_.at(gemm.B.tt.name)};
+        // const auto& C{global_tensors_.at(gemm.C.tt.name)};
+        // const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
 
     add_function_epilogue();
     layers_.push_back(func_id);

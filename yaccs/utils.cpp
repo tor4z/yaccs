@@ -21,6 +21,7 @@ void tensor_type_from_onnx(const onnx::TypeProto_Tensor& onnx_tensor, TensorType
 {
     tensor_type.dims = onnx_tensor.shape().dim_size();
     tensor_type.dtype = static_cast<DType>(onnx_tensor.elem_type());
+    tensor_type.row_major = true;
     for (int i = 0; i < tensor_type.dims; ++i) {
         const auto& dim{onnx_tensor.shape().dim().Get(i)};
         if (!dim.dim_param().empty()) {
@@ -37,6 +38,7 @@ void tensor_from_onnx(const onnx::TensorProto& pb_tensor, Tensor* tensor)
     tensor->tt.name = pb_tensor.name();
     tensor->tt.dtype = static_cast<DType>(pb_tensor.data_type());
     tensor->tt.dims = pb_tensor.dims().size();
+    tensor->tt.row_major = true;
     for (int i = 0; i < tensor->tt.dims; ++i) {
         tensor->tt.shape[i] = pb_tensor.dims().at(i);
     }

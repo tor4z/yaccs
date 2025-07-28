@@ -45,9 +45,9 @@ template<>
 inline auto Tensor::at<DT_FLOAT>(int i0, int i1) const
 {
     if (tt.row_major) {
-        return at<DT_FLOAT>(i0 * tt.shape[1] + i1);
+        return at<DT_FLOAT>(i0 * tt.shape[tt.dims - 1] + i1);
     } else {
-        return at<DT_FLOAT>(i1 * tt.shape[0] + i0);
+        return at<DT_FLOAT>(i1 * tt.shape[tt.dims - 2] + i0);
     }
 }
 

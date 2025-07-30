@@ -56,5 +56,6 @@ inline bool should_decorate(StorageClass sc)
 
 const std::string& as_string(StorageClass sc);
 const std::string& as_string(Decoration deco);
+const std::string& as_string(BuiltIn built_in);
 
 #endif // YACCS_CODE_GEN_UTILS_H_

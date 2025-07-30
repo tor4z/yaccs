@@ -15,6 +15,7 @@ struct CodeGen
     void push_entry(const EntryDef& ed);
     void push_struct_decorate(const DecorateStructDef& dsd);
     void push_array_decorate(const DecorateArrayDef& dad);
+    void push_builtin_decorate(const DecorateBuiltInDef& built_in);
     void push_label(id_t id);
     void push_return();
     void push_function_end();
@@ -30,6 +31,10 @@ struct CodeGen
     void push_type_pointer(const TypePointerDef& tp);
     void push_function_call(const FunctionCallDef& fcd);
     void push_control_barrier(const ControlBarrierDef& cbd);
+    void push_vector_dtype(const VectorDef& vd);
+    void push_load(const LoadDef& ld);
+    void push_store(const StoreDef& sd);
+    void push_access_chain(const AccessChainDef& acd);
     template<typename T>
     void push_const_dtype(const DTypeConstDef<T>& dconst);
 private:

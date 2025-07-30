@@ -86,3 +86,17 @@ const std::string& as_string(Decoration deco)
 
     return relaxed_precision; // unreachable, return something to suppress compiler warning
 }
+
+const std::string& as_string(BuiltIn built_in)
+{
+    static const std::string workgroup_size{"WorkgroupSize"};
+    static const std::string global_invocation_id{"GlobalInvocationId"};
+
+    switch (built_in) {
+    case BI_WORKGROUP_SIZE:         return workgroup_size;
+    case BI_GLOBAL_INVOCATION_ID:   return global_invocation_id;
+    default:                        assert(false && "Not implemented");
+    }
+
+    return workgroup_size;  // return something to suppress compiler warning
+}

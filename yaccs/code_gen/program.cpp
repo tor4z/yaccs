@@ -32,6 +32,9 @@ void Program::set_main()
     ed.local_size_z = 1;
     ed.main_id = add_function_prologue(add_void_type());
 
+        auto invo_id{global_invocation_id()};
+        ed.input_ids.push_back(invo_id);
+
         Scope exe_scope{SCOPE_WORKGROUP};
         Scope mem_scope{SCOPE_WORKGROUP};
         MemSemantic mem_semantics{MS_WORKGROUP_MEMORY | MS_ACQUIRE_RELEASE};
@@ -134,7 +137,7 @@ id_t Program::add_type_pointer(id_t type_id, StorageClass sc)
 
     for (size_t i = 0; i < dfs.size(); ++i) {
         const auto& df{dfs.at(i)};
-        if (df.id == type_id && df.storage_class == sc) {
+        if (df.type_id == type_id && df.storage_class == sc) {
             return df.id;
         }
     }
@@ -524,9 +527,20 @@ void Program::add_relu(const OpRelu& relu)
         memcpy(tensor_Y.tt.shape, X.shape, MAX_TENSOR_DIMS * sizeof(X.shape[0]));
         add_shared_tensor(tensor_Y);
         const auto& Y{global_tensors_.at(relu.Y.tt.name)};
-        
-        // define relu operation
 
+        // define relu operation
+        auto invo_id{global_invocation_id()};
+        auto uint32_id{add_dtype(DT_UINT32)};
+        auto invo_id_x{add_var(uint32_id, SC_FUNCTION)};
+        auto invo_id_x_tp{add_type_pointer(uint32_id, SC_INPUT)};
+        auto pointer{access_chain(func_id, invo_id_x_tp, invo_id, 0)};
+        id_t invo_x_object{load_var(uint32_id, pointer)};
+        store_var(invo_id_x, invo_x_object);
+        // auto invo_x = gl_GlobalInvocationID.x;
+        // auto invo_y = gl_GlobalInvocationID.y;
+        // auto input = X.load(x, v);
+        // input = max(input, 0);
+        // Y.store(input);
 
     add_function_epilogue();
     layers_.push_back(func_id);
@@ -551,6 +565,87 @@ void Program::add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic 
     cbd.mem_semantics_id = add_const(DType::DT_UINT32, static_cast<uint32_t>(mem_semantics));
 
     code_gen_.push_control_barrier(cbd);
+}
+
+id_t Program::add_vector_dtype(id_t component_type_id, int count)
+{
+    static std::vector<VectorDef> defs;
+
+    for (const auto& it : defs) {
+        if (it.component_type_id == component_type_id && it.count == count) {
+            return it.id;
+        }
+    }
+
+    VectorDef vd{.id = alloc_id(), .component_type_id = component_type_id, .count = count};
+    defs.push_back(vd);
+    code_gen_.push_vector_dtype(vd);
+
+    return vd.id;
+}
+
+id_t Program::global_invocation_id()
+{
+    static bool has_defined{false};
+    static id_t id{0};
+    if (has_defined) {
+        return id;
+    }
+
+    auto uint_type_id{add_dtype(DT_UINT32)};
+    auto vec_uint_3{add_vector_dtype(uint_type_id, 3)};
+    id = add_var(vec_uint_3, SC_INPUT);
+    has_defined = true;
+
+    DecorateBuiltInDef deco;
+    deco.var_id = id;
+    deco.built_in = BI_GLOBAL_INVOCATION_ID;
+    code_gen_.push_builtin_decorate(deco);
+
+    return id;
+}
+
+id_t Program::load_var(id_t dtype_id, id_t pointer)
+{
+    LoadDef ld;
+    ld.pointer = pointer;
+    ld.type_id = dtype_id;
+    ld.id = alloc_id();
+    code_gen_.push_load(ld);
+    return ld.id;
+}
+
+void Program::store_var(id_t pointer, id_t object)
+{
+    StoreDef sd;
+    sd.pointer = pointer;
+    sd.object = object;
+    code_gen_.push_store(sd);
+}
+
+id_t Program::access_chain(id_t func_id, id_t type_id, id_t base_id, uint32_t index)
+{
+    static std::vector<AccessChainDef> dfs;
+
+    auto index_id{add_const(DT_UINT32, index)};
+
+    AccessChainDef acd;
+    acd.func_id = func_id;
+    acd.base_id = base_id;
+    acd.index_id = index_id;
+    acd.type_id = type_id;
+
+    // reusable check
+    for (const auto& it: dfs) {
+        if (it.func_id == acd.func_id && it.base_id == acd.base_id && it.index_id == acd.base_id) {
+            return it.id;
+        }
+    }
+
+    acd.id = alloc_id();
+    code_gen_.push_access_chain(acd);
+    dfs.push_back(acd);
+    return acd.id;
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

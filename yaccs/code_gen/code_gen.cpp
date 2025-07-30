@@ -41,6 +41,11 @@ void CodeGen::push_array_decorate(const DecorateArrayDef& dad)
     decorate_ss_ << "OpDecorate %" << dad.array_type_id << " ArrayStride 16\n";
 }
 
+void CodeGen::push_builtin_decorate(const DecorateBuiltInDef& built_in)
+{
+    decorate_ss_ << "OpDecorate %" << built_in.var_id << " BuiltIn " << as_string(built_in.built_in) << "\n";
+}
+
 void CodeGen::push_dtype(DType dt, id_t id)
 {
     switch (dt) {
@@ -102,8 +107,13 @@ void CodeGen::push_type_pointer(const TypePointerDef& tp)
 
 void CodeGen::push_variable(const VarDef& var)
 {
-    type_const_def_ss_ << "%" << var.id << " = OpVariable %" << var.type_pointer_id
-        << " " << as_string(var.storage_class) << "\n";
+    if (var.storage_class == SC_FUNCTION) {
+        fn_def_ss_ << "\t%" << var.id << " = OpVariable %" << var.type_pointer_id
+            << " " << as_string(var.storage_class) << "\n";
+    } else {
+        type_const_def_ss_ << "%" << var.id << " = OpVariable %" << var.type_pointer_id
+            << " " << as_string(var.storage_class) << "\n";
+    }
 }
 
 void CodeGen::push_function(const FunctionHeaderDef& fh)
@@ -144,6 +154,27 @@ void CodeGen::push_decorate_set_binding(const DecorateSetBindingDef& deco)
     assert(deco.binding >= 0 && deco.set >= 0 && "Bad decoration");
     decorate_ss_ << "OpDecorate %" << deco.target << " DescriptorSet " << deco.set << "\n";
     decorate_ss_ << "OpDecorate %" << deco.target << " Binding " << deco.binding << "\n";
+}
+
+void CodeGen::push_vector_dtype(const VectorDef& vd)
+{
+    type_const_def_ss_ << "%" << vd.id << " = OpTypeVector %" << vd.component_type_id << " " << vd.count << "\n";
+}
+
+void CodeGen::push_load(const LoadDef& ld)
+{
+    fn_def_ss_ << "\t%" << ld.id << " = OpLoad %" << ld.type_id << " %" << ld.pointer << "\n";
+}
+
+void CodeGen::push_store(const StoreDef& sd)
+{
+    fn_def_ss_ << "\tOpStore %" << sd.pointer << " %" << sd.object << "\n";
+}
+
+void CodeGen::push_access_chain(const AccessChainDef& acd)
+{
+    fn_def_ss_ << "\t%" << acd.id << " = OpAccessChain %" << acd.type_id
+        << " %" << acd.base_id << " %" << acd.index_id << "\n";
 }
 
 void CodeGen::assemble(std::ofstream& ofs)

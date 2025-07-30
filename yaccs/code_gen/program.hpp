@@ -6,6 +6,7 @@
 #include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/tensor.hpp"
 #include "yaccs/ops.hpp"
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -34,6 +35,7 @@ private:
     id_t add_label();
     id_t add_function_type(id_t return_type_id);
     id_t add_struct_dtype(const std::vector<id_t>& dtypes, bool reuse=true);
+    id_t add_vector_dtype(id_t component_type_id, int count);
     id_t add_array_dtype(id_t dtype, uint32_t length, StorageClass sc, bool reuse=true);
     id_t add_const_array(id_t arr_type, const std::vector<id_t>& elem_ids);
     id_t add_dtype(DType dtype);
@@ -43,10 +45,15 @@ private:
     id_t add_type_pointer(id_t type_id, StorageClass sc);
     id_t add_var(id_t type_id, StorageClass sc);
     id_t add_raw_const(DType dtype, int elem_idx, const Tensor& tensor);
+    id_t add_function_call(id_t id);
+    id_t global_invocation_id();
+    id_t load_var(id_t dtype_id, id_t pointer);
+    void store_var(id_t pointer, id_t object);
+    id_t access_chain(id_t func_id, id_t type_id, id_t base_id, uint32_t index);
+    void add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic mem_semantics);
+
     template<typename T>
     id_t add_const(DType dtype, T value);
-    id_t add_function_call(id_t id);
-    void add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic mem_semantics);
 
     FunctionHeaderDef& find_function_def(id_t id);
 }; // class Program

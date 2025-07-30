@@ -83,6 +83,23 @@ enum StorageClass
     SC_NONE,
 }; // enum StorageClass
 
+enum BuiltIn
+{
+    BI_WORKGROUP_SIZE = 25,
+    BI_GLOBAL_INVOCATION_ID = 28,
+}; // enum BuiltIn
+
+struct TensorMeta
+{
+    std::string name;
+    int shape[MAX_TENSOR_DIMS];
+    int dims;
+    DType dtype;
+    id_t tensor_id;
+    id_t dtype_id;
+    id_t dtype_pointer_id;
+}; // struct TensorMeta
+
 struct ArrTypeDef {
     uint32_t length;
     id_t dtype;
@@ -159,6 +176,12 @@ struct DecorateArrayDef
     id_t array_type_id;
 }; // struct DecorateArrayDef
 
+struct DecorateBuiltInDef
+{
+    id_t var_id;
+    BuiltIn built_in;
+}; // struct DecorateBuiltInDef
+
 struct DecorateStructDef
 {
     struct FieldOffset
@@ -186,15 +209,33 @@ struct ControlBarrierDef
     id_t mem_semantics_id;
 }; // struct ControlBarrierDef
 
-struct TensorMeta
+struct VectorDef
 {
-    std::string name;
-    int shape[MAX_TENSOR_DIMS];
-    int dims;
-    DType dtype;
-    id_t tensor_id;
-    id_t dtype_id;
-    id_t dtype_pointer_id;
-}; // struct TensorMeta
+    id_t id;
+    id_t component_type_id;
+    int count;
+}; // struct VectorDef
+
+struct LoadDef
+{
+    id_t id;
+    id_t type_id;
+    id_t pointer;
+}; // struct LoadDef
+
+struct StoreDef
+{
+    id_t pointer;
+    id_t object;
+}; // struct LoadDef
+
+struct AccessChainDef
+{
+    id_t id;
+    id_t type_id;
+    id_t base_id;
+    id_t index_id;
+    id_t func_id; // for reusable chack
+}; // struct AccessChainDef
 
 #endif // YACCS_DEF_H_

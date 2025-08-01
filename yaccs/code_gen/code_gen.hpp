@@ -35,6 +35,7 @@ struct CodeGen
     void push_load(const LoadDef& ld);
     void push_store(const StoreDef& sd);
     void push_access_chain(const AccessChainDef& acd);
+    void push_snippet_invo_bound_check(const InvocationBoundCheckDef& def);
     template<typename T>
     void push_const_dtype(const DTypeConstDef<T>& dconst);
 private:

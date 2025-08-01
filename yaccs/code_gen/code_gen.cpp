@@ -1,6 +1,7 @@
 #include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
+#include "yaccs/dtype.hpp"
 #include <cassert>
 #include <cstddef>
 
@@ -60,6 +61,9 @@ void CodeGen::push_dtype(DType dt, id_t id)
         break;
     case DT_UINT32:
         type_const_def_ss_ << "%" << id << " = OpTypeInt 32 0\n";
+        break;
+    case DT_BOOL:
+        type_const_def_ss_ << "%" << id << " = OpTypeBool\n";
         break;
     default: assert(false && "Unsupported type");
     }
@@ -125,7 +129,7 @@ void CodeGen::push_function(const FunctionHeaderDef& fh)
 
 void CodeGen::push_label(id_t id)
 {
-    fn_def_ss_ << "%" << id << " = OpLabel\n";
+    fn_def_ss_ << "\t%" << id << " = OpLabel\n";
 }
 
 void CodeGen::push_return()
@@ -173,8 +177,23 @@ void CodeGen::push_store(const StoreDef& sd)
 
 void CodeGen::push_access_chain(const AccessChainDef& acd)
 {
-    fn_def_ss_ << "\t%" << acd.id << " = OpAccessChain %" << acd.type_id
-        << " %" << acd.base_id << " %" << acd.index_id << "\n";
+    fn_def_ss_ << "\t%" << acd.id << " = OpAccessChain %" << acd.type_id << " %" << acd.base_id;
+    for (auto it: acd.index_ids) {
+        fn_def_ss_ << " %" << it;
+    }
+    fn_def_ss_ << "\n";
+}
+
+void CodeGen::push_snippet_invo_bound_check(const InvocationBoundCheckDef& def)
+{
+    fn_def_ss_ << "\t%" << def.condition_id << " = OpUGreaterThan %" << def.bool_type_id
+        << " %" << def.invo_comp_id << " %" << def.tensor_shape_comp_id << "\n";
+    fn_def_ss_ << "\t\tOpSelectionMerge %" << def.label_id_next << " None\n";
+    fn_def_ss_ << "\t\tOpBranchConditional %" << def.condition_id << " %"
+        << def.label_id_ret << " %" << def.label_id_next << "\n";
+    fn_def_ss_ << "\t%" << def.label_id_ret << " = OpLabel\n";
+    fn_def_ss_ << "\t\tOpReturn\n";
+    fn_def_ss_ << "\t%" << def.label_id_next << " = OpLabel\n";
 }
 
 void CodeGen::assemble(std::ofstream& ofs)

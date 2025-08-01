@@ -257,8 +257,8 @@ id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc, bo
     }
 
     auto dtype_id{add_dtype(tensor_type.dtype)};    // define type dtype
-    auto int_id{add_dtype(DT_INT32)};               // define int type
-    auto shape_id{add_array_dtype(int_id, MAX_TENSOR_DIMS, sc, reuse)};
+    auto uint_id{add_dtype(DT_UINT32)};               // define uint type
+    auto shape_id{add_array_dtype(uint_id, MAX_TENSOR_DIMS, sc, reuse)};
     auto data_id{add_array_dtype(dtype_id, num_elems, sc, reuse)};
 
     uint32_t offset{0};
@@ -267,7 +267,7 @@ id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc, bo
 
     std::vector<id_t> struct_ids;
     dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 16;
-    struct_ids.push_back(int_id);   // dims
+    struct_ids.push_back(uint_id);   // dims
     dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 16 * MAX_TENSOR_DIMS; 
     struct_ids.push_back(shape_id); // shape
     dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
@@ -326,17 +326,17 @@ id_t Program::add_const_tensor(const Tensor& tensor)
     sd.type_id = tensor_type_id;
 
     // setup dims
-    sd.elem_ids.push_back(add_const(DT_INT32, tensor.tt.dims));
+    sd.elem_ids.push_back(add_const(DT_UINT32, tensor.tt.dims));
 
     // setup shape
     int num_elems{1};
     std::vector<id_t> shape(MAX_TENSOR_DIMS);
     for (int i = 0; i < MAX_TENSOR_DIMS; ++i) {
         num_elems *= i < tensor.tt.dims ? tensor.tt.shape[i] : 1;
-        shape.at(i) = add_const(DT_INT32, i < tensor.tt.dims ? tensor.tt.shape[i] : 0);
+        shape.at(i) = add_const(DT_UINT32, i < tensor.tt.dims ? tensor.tt.shape[i] : 0);
     }
-    auto int_id{add_dtype(DT_INT32)};
-    auto shape_id{add_array_dtype(int_id, MAX_TENSOR_DIMS, SC_NONE)};
+    auto uint_id{add_dtype(DT_UINT32)};
+    auto shape_id{add_array_dtype(uint_id, MAX_TENSOR_DIMS, SC_NONE)};
     sd.elem_ids.push_back(add_const_array(shape_id, shape));
 
     // setup data
@@ -528,14 +528,16 @@ void Program::add_relu(const OpRelu& relu)
         add_shared_tensor(tensor_Y);
         const auto& Y{global_tensors_.at(relu.Y.tt.name)};
 
+        invocation_boundary_check_x(func_id, Y.tensor_id);
+        invocation_boundary_check_y(func_id, Y.tensor_id);
         // define relu operation
-        auto invo_id{global_invocation_id()};
-        auto uint32_id{add_dtype(DT_UINT32)};
-        auto invo_id_x{add_var(uint32_id, SC_FUNCTION)};
-        auto invo_id_x_tp{add_type_pointer(uint32_id, SC_INPUT)};
-        auto pointer{access_chain(func_id, invo_id_x_tp, invo_id, 0)};
-        id_t invo_x_object{load_var(uint32_id, pointer)};
-        store_var(invo_id_x, invo_x_object);
+        // auto invo_id{global_invocation_id()};
+        // auto uint32_id{add_dtype(DT_UINT32)};
+        // auto invo_id_x{add_var(uint32_id, SC_FUNCTION)};
+        // auto invo_id_x_tp{add_type_pointer(uint32_id, SC_INPUT)};
+        // auto pointer{access_chain(func_id, invo_id_x_tp, invo_id, 0)};
+        // id_t invo_x_object{load_var(uint32_id, pointer)};
+        // store_var(invo_id_x, invo_x_object);
         // auto invo_x = gl_GlobalInvocationID.x;
         // auto invo_y = gl_GlobalInvocationID.y;
         // auto input = X.load(x, v);
@@ -623,21 +625,23 @@ void Program::store_var(id_t pointer, id_t object)
     code_gen_.push_store(sd);
 }
 
-id_t Program::access_chain(id_t func_id, id_t type_id, id_t base_id, uint32_t index)
+id_t Program::access_chain(id_t func_id, id_t type_id, id_t base_id, const std::vector<uint32_t>& indices)
 {
     static std::vector<AccessChainDef> dfs;
-
-    auto index_id{add_const(DT_UINT32, index)};
-
     AccessChainDef acd;
+
+    acd.index_ids.reserve(indices.size());
+    for (auto index: indices) {
+        acd.index_ids.push_back(add_const(DT_UINT32, index));
+    }
+
     acd.func_id = func_id;
     acd.base_id = base_id;
-    acd.index_id = index_id;
     acd.type_id = type_id;
 
     // reusable check
     for (const auto& it: dfs) {
-        if (it.func_id == acd.func_id && it.base_id == acd.base_id && it.index_id == acd.base_id) {
+        if (it.func_id == acd.func_id && it.base_id == acd.base_id && it.index_ids == acd.index_ids) {
             return it.id;
         }
     }
@@ -646,6 +650,55 @@ id_t Program::access_chain(id_t func_id, id_t type_id, id_t base_id, uint32_t in
     code_gen_.push_access_chain(acd);
     dfs.push_back(acd);
     return acd.id;
+}
+
+void Program::invocation_boundary_check_x(id_t func_id, id_t tensor_id)
+{
+    InvocationBoundCheckDef def;
+    def.label_id_ret = alloc_id();
+    def.label_id_next = alloc_id();
+    def.bool_type_id = add_dtype(DT_BOOL);
+    def.condition_id = alloc_id();
+    // for invocation
+    def.invo_id = global_invocation_id();
+    def.invo_comp_type_id = add_dtype(DT_UINT32);
+    def.invo_comp_type_ptr_id = add_type_pointer(def.invo_comp_type_id, SC_INPUT);
+    def.invo_comp_ptr = access_chain(func_id, def.invo_comp_type_ptr_id, def.invo_id, {0});
+    def.invo_comp_id = load_var(def.invo_comp_type_id, def.invo_comp_ptr);
+    // for tensor
+    def.tensor_id = tensor_id;
+    def.tensor_shape_comp_type_id = add_dtype(DT_UINT32);
+    def.tensor_shape_comp_type_ptr_id = add_type_pointer(def.tensor_shape_comp_type_id, SC_WORKGROUP);
+    def.tensor_shape_comp_ptr_id = access_chain(func_id, def.tensor_shape_comp_type_ptr_id, tensor_id, {1, 0});
+    def.tensor_shape_comp_id = load_var(def.tensor_shape_comp_type_id, def.tensor_shape_comp_ptr_id);
+    code_gen_.push_snippet_invo_bound_check(def);
+}
+
+void Program::invocation_boundary_check_y(id_t func_id, id_t tensor_id)
+{
+    InvocationBoundCheckDef def;
+    def.label_id_ret = alloc_id();
+    def.label_id_next = alloc_id();
+    def.bool_type_id = add_dtype(DT_BOOL);
+    def.condition_id = alloc_id();
+    // for invocation
+    def.invo_id = global_invocation_id();
+    def.invo_comp_type_id = add_dtype(DT_UINT32);
+    def.invo_comp_type_ptr_id = add_type_pointer(def.invo_comp_type_id, SC_INPUT);
+    def.invo_comp_ptr = access_chain(func_id, def.invo_comp_type_ptr_id, def.invo_id, {1});
+    def.invo_comp_id = load_var(def.invo_comp_type_id, def.invo_comp_ptr);
+    // for tensor
+    def.tensor_id = tensor_id;
+    def.tensor_shape_comp_type_id = add_dtype(DT_UINT32);
+    def.tensor_shape_comp_type_ptr_id = add_type_pointer(def.tensor_shape_comp_type_id, SC_WORKGROUP);
+    def.tensor_shape_comp_ptr_id = access_chain(func_id, def.tensor_shape_comp_type_ptr_id, tensor_id, {1, 1});
+    def.tensor_shape_comp_id = load_var(def.tensor_shape_comp_type_id, def.tensor_shape_comp_ptr_id);
+    code_gen_.push_snippet_invo_bound_check(def);
+}
+
+void Program::invocation_boundary_check_z(id_t func_id, id_t tensor_id)
+{
+
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

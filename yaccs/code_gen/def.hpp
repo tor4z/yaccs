@@ -234,8 +234,28 @@ struct AccessChainDef
     id_t id;
     id_t type_id;
     id_t base_id;
-    id_t index_id;
+    std::vector<id_t> index_ids;
     id_t func_id; // for reusable chack
 }; // struct AccessChainDef
+
+struct InvocationBoundCheckDef
+{
+    id_t label_id_ret;
+    id_t label_id_next;
+    id_t bool_type_id;
+    id_t condition_id;
+    // for invocation
+    id_t invo_id;
+    id_t invo_comp_type_id;
+    id_t invo_comp_type_ptr_id;
+    id_t invo_comp_id;
+    id_t invo_comp_ptr;
+    // for tensor
+    id_t tensor_id;
+    id_t tensor_shape_comp_type_ptr_id;
+    id_t tensor_shape_comp_type_id;
+    id_t tensor_shape_comp_ptr_id;
+    id_t tensor_shape_comp_id;
+}; // struct InvocationBoundaryCheckDef
 
 #endif // YACCS_DEF_H_

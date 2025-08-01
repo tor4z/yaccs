@@ -49,8 +49,12 @@ private:
     id_t global_invocation_id();
     id_t load_var(id_t dtype_id, id_t pointer);
     void store_var(id_t pointer, id_t object);
-    id_t access_chain(id_t func_id, id_t type_id, id_t base_id, uint32_t index);
+    id_t access_chain(id_t func_id, id_t type_id, id_t base_id, const std::vector<uint32_t>& indices);
     void add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic mem_semantics);
+
+    void invocation_boundary_check_x(id_t func_id, id_t tensor_id);
+    void invocation_boundary_check_y(id_t func_id, id_t tensor_id);
+    void invocation_boundary_check_z(id_t func_id, id_t tensor_id);
 
     template<typename T>
     id_t add_const(DType dtype, T value);

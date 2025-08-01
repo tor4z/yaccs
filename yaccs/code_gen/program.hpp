@@ -52,9 +52,7 @@ private:
     id_t access_chain(id_t func_id, id_t type_id, id_t base_id, const std::vector<uint32_t>& indices);
     void add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic mem_semantics);
 
-    void invocation_boundary_check_x(id_t func_id, id_t tensor_id);
-    void invocation_boundary_check_y(id_t func_id, id_t tensor_id);
-    void invocation_boundary_check_z(id_t func_id, id_t tensor_id);
+    void invocation_boundary_check(id_t func_id, id_t tensor_id, uint32_t index);
 
     template<typename T>
     id_t add_const(DType dtype, T value);

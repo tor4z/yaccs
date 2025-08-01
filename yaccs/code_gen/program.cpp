@@ -528,8 +528,8 @@ void Program::add_relu(const OpRelu& relu)
         add_shared_tensor(tensor_Y);
         const auto& Y{global_tensors_.at(relu.Y.tt.name)};
 
-        invocation_boundary_check_x(func_id, Y.tensor_id);
-        invocation_boundary_check_y(func_id, Y.tensor_id);
+        invocation_boundary_check(func_id, Y.tensor_id, 0);
+        invocation_boundary_check(func_id, Y.tensor_id, 1);
         // define relu operation
         // auto invo_id{global_invocation_id()};
         // auto uint32_id{add_dtype(DT_UINT32)};
@@ -652,7 +652,7 @@ id_t Program::access_chain(id_t func_id, id_t type_id, id_t base_id, const std::
     return acd.id;
 }
 
-void Program::invocation_boundary_check_x(id_t func_id, id_t tensor_id)
+void Program::invocation_boundary_check(id_t func_id, id_t tensor_id, uint32_t index)
 {
     InvocationBoundCheckDef def;
     def.label_id_ret = alloc_id();
@@ -663,42 +663,15 @@ void Program::invocation_boundary_check_x(id_t func_id, id_t tensor_id)
     def.invo_id = global_invocation_id();
     def.invo_comp_type_id = add_dtype(DT_UINT32);
     def.invo_comp_type_ptr_id = add_type_pointer(def.invo_comp_type_id, SC_INPUT);
-    def.invo_comp_ptr = access_chain(func_id, def.invo_comp_type_ptr_id, def.invo_id, {0});
+    def.invo_comp_ptr = access_chain(func_id, def.invo_comp_type_ptr_id, def.invo_id, {index});
     def.invo_comp_id = load_var(def.invo_comp_type_id, def.invo_comp_ptr);
     // for tensor
     def.tensor_id = tensor_id;
     def.tensor_shape_comp_type_id = add_dtype(DT_UINT32);
     def.tensor_shape_comp_type_ptr_id = add_type_pointer(def.tensor_shape_comp_type_id, SC_WORKGROUP);
-    def.tensor_shape_comp_ptr_id = access_chain(func_id, def.tensor_shape_comp_type_ptr_id, tensor_id, {1, 0});
+    def.tensor_shape_comp_ptr_id = access_chain(func_id, def.tensor_shape_comp_type_ptr_id, tensor_id, {1, index});
     def.tensor_shape_comp_id = load_var(def.tensor_shape_comp_type_id, def.tensor_shape_comp_ptr_id);
     code_gen_.push_snippet_invo_bound_check(def);
-}
-
-void Program::invocation_boundary_check_y(id_t func_id, id_t tensor_id)
-{
-    InvocationBoundCheckDef def;
-    def.label_id_ret = alloc_id();
-    def.label_id_next = alloc_id();
-    def.bool_type_id = add_dtype(DT_BOOL);
-    def.condition_id = alloc_id();
-    // for invocation
-    def.invo_id = global_invocation_id();
-    def.invo_comp_type_id = add_dtype(DT_UINT32);
-    def.invo_comp_type_ptr_id = add_type_pointer(def.invo_comp_type_id, SC_INPUT);
-    def.invo_comp_ptr = access_chain(func_id, def.invo_comp_type_ptr_id, def.invo_id, {1});
-    def.invo_comp_id = load_var(def.invo_comp_type_id, def.invo_comp_ptr);
-    // for tensor
-    def.tensor_id = tensor_id;
-    def.tensor_shape_comp_type_id = add_dtype(DT_UINT32);
-    def.tensor_shape_comp_type_ptr_id = add_type_pointer(def.tensor_shape_comp_type_id, SC_WORKGROUP);
-    def.tensor_shape_comp_ptr_id = access_chain(func_id, def.tensor_shape_comp_type_ptr_id, tensor_id, {1, 1});
-    def.tensor_shape_comp_id = load_var(def.tensor_shape_comp_type_id, def.tensor_shape_comp_ptr_id);
-    code_gen_.push_snippet_invo_bound_check(def);
-}
-
-void Program::invocation_boundary_check_z(id_t func_id, id_t tensor_id)
-{
-
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

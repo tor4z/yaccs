@@ -32,6 +32,7 @@ struct CodeGen
     void push_function_call(const FunctionCallDef& fcd);
     void push_control_barrier(const ControlBarrierDef& cbd);
     void push_vector_dtype(const VectorDef& vd);
+    void push_binary_operation(const BinaryOpDef& bod);
     void push_load(const LoadDef& ld);
     void push_store(const StoreDef& sd);
     void push_access_chain(const AccessChainDef& acd);

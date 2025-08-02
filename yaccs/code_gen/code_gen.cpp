@@ -165,6 +165,12 @@ void CodeGen::push_vector_dtype(const VectorDef& vd)
     type_const_def_ss_ << "%" << vd.id << " = OpTypeVector %" << vd.component_type_id << " " << vd.count << "\n";
 }
 
+void CodeGen::push_binary_operation(const BinaryOpDef& bod)
+{
+    fn_def_ss_ << "%" << bod.result_id << " = " << as_string(bod.bo) << " %" << bod.type_id
+        << " %" << bod.op1_id << " %" << bod.op2_id << "\n";
+}
+
 void CodeGen::push_load(const LoadDef& ld)
 {
     fn_def_ss_ << "\t%" << ld.id << " = OpLoad %" << ld.type_id << " %" << ld.pointer << "\n";

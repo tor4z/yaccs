@@ -4,6 +4,7 @@
 #include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
 #include "yaccs/code_gen/code_gen.hpp"
+#include "yaccs/dtype.hpp"
 #include "yaccs/tensor.hpp"
 #include "yaccs/ops.hpp"
 #include <cstdint>
@@ -49,10 +50,23 @@ private:
     id_t global_invocation_id();
     id_t load_var(id_t dtype_id, id_t pointer);
     void store_var(id_t pointer, id_t object);
-    id_t access_chain(id_t func_id, id_t type_id, id_t base_id, const std::vector<uint32_t>& indices);
+    id_t access_chain_indices(id_t func_id, id_t type_id, id_t base_id, const std::vector<uint32_t>& indices);
+    id_t access_chain(id_t func_id, id_t type_id, id_t base_id, const std::vector<id_t>& indices);
     void add_control_barrier(Scope exe_scope, Scope mem_scope, MemSemantic mem_semantics);
 
-    void invocation_boundary_check(id_t func_id, id_t tensor_id, uint32_t index);
+    id_t binary_op(BinaryOperator bo, id_t func_id, id_t type_id, id_t op1_id, id_t op2_id);
+
+    id_t access_tensor_shape_index(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index);
+    id_t access_invocation_index(id_t func_id, uint32_t index);
+    void invocation_boundary_check(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index);
+    id_t load_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
+        id_t index_id);
+    id_t load_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
+        id_t i, id_t step, id_t j);
+    void store_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
+        id_t index_id, id_t object_id);
+    void store_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
+        id_t i, id_t step, id_t j, id_t object_id);
 
     template<typename T>
     id_t add_const(DType dtype, T value);

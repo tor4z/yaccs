@@ -89,6 +89,13 @@ enum BuiltIn
     BI_GLOBAL_INVOCATION_ID = 28,
 }; // enum BuiltIn
 
+enum BinaryOperator
+{
+    BO_UNDEFINED = 0,
+    BO_IMUL = 1,
+    BO_IADD = 2,
+}; // enum BinaryOperator
+
 struct TensorMeta
 {
     std::string name;
@@ -98,6 +105,7 @@ struct TensorMeta
     id_t tensor_id;
     id_t dtype_id;
     id_t dtype_pointer_id;
+    StorageClass storage_class;
 }; // struct TensorMeta
 
 struct ArrTypeDef {
@@ -245,17 +253,41 @@ struct InvocationBoundCheckDef
     id_t bool_type_id;
     id_t condition_id;
     // for invocation
+    id_t invo_comp_id;
+    // for tensor
+    id_t tensor_shape_comp_id;
+}; // struct InvocationBoundaryCheckDef
+
+struct AccessInvocationEelementDef
+{
+    id_t id;
     id_t invo_id;
     id_t invo_comp_type_id;
     id_t invo_comp_type_ptr_id;
-    id_t invo_comp_id;
-    id_t invo_comp_ptr;
-    // for tensor
+    id_t invo_comp_ptr_id;
+    id_t func_id;
+    uint32_t index;
+}; // struct AccessInvocationEelementDef
+
+struct AccessTensorShapeEelementDef
+{
+    id_t id;
     id_t tensor_id;
-    id_t tensor_shape_comp_type_ptr_id;
-    id_t tensor_shape_comp_type_id;
-    id_t tensor_shape_comp_ptr_id;
-    id_t tensor_shape_comp_id;
-}; // struct InvocationBoundaryCheckDef
+    id_t func_id;
+    id_t shape_comp_type_ptr_id;
+    id_t shape_comp_type_id;
+    id_t shape_comp_ptr_id;
+    uint32_t index;
+}; // struct AccessTensorShapeEelementDef
+
+struct BinaryOpDef
+{
+    id_t result_id;
+    id_t func_id;
+    id_t type_id;
+    id_t op1_id;
+    id_t op2_id;
+    BinaryOperator bo;
+}; // struct BinaryOpDef
 
 #endif // YACCS_DEF_H_

@@ -100,3 +100,17 @@ const std::string& as_string(BuiltIn built_in)
 
     return workgroup_size;  // return something to suppress compiler warning
 }
+
+const std::string& as_string(BinaryOperator bo)
+{
+    static const std::string iadd{"OpIAdd"};
+    static const std::string imul{"OpIMul"};
+
+    switch (bo) {
+    case BO_IADD:   return iadd;
+    case BO_IMUL:   return imul;
+    default:        assert(false && "Not implemented");
+    }
+
+    return iadd;  // return something to suppress compiler warning
+}

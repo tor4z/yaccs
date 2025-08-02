@@ -2,6 +2,7 @@
 #define YACCS_PROGRAM_H_
 
 #include "yaccs/code_gen/def.hpp"
+#include "yaccs/code_gen/exts/exts.hpp"
 #include "yaccs/code_gen/utils.hpp"
 #include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/dtype.hpp"
@@ -24,11 +25,14 @@ struct Program
     void add_relu(const OpRelu& relu);
     void dump_ir();
 private:
+    friend struct ext::Ext;
+
     std::vector<id_t> layers_;  // layers in order
     std::unordered_map<id_t, FunctionHeaderDef> global_funcs_;
     std::unordered_map<std::string, TensorMeta> global_tensors_;
     std::string name_;
     CodeGen code_gen_;
+    ext::Ext std_450_;
 
     id_t add_function_prologue(id_t return_type_id);
     void add_function_epilogue();
@@ -79,13 +83,14 @@ id_t Program::add_const(DType dtype, T value)
 {
     static std::vector<DTypeConstDef<T>> defs{};
 
+    auto dtype_id{add_dtype(dtype)};
     for (auto& it: defs) {
-        if (value_eq(it.value, value)) {
+        if (it.dtype_id == dtype_id && value_eq(it.value, value)) {
             return it.id;
         }
     }
 
-    DTypeConstDef<T> dconst {.value = value, .dtype_id = add_dtype(dtype), .id = alloc_id()};
+    DTypeConstDef<T> dconst {.value = value, .dtype_id = dtype_id, .id = alloc_id()};
     code_gen_.push_const_dtype(dconst);
     defs.push_back(dconst);
     return dconst.id;

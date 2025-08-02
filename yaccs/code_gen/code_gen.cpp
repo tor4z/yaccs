@@ -1,6 +1,7 @@
 #include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
+#include "yaccs/code_gen/exts/utils.hpp"
 #include "yaccs/dtype.hpp"
 #include <cassert>
 #include <cstddef>
@@ -8,14 +9,29 @@
 
 CodeGen::CodeGen() {}
 
+void CodeGen::assemble(std::ofstream& ofs)
+{
+    ofs << header_ss_.str();
+    ofs << ext_import_ss_.str();
+    ofs << entry_def_ss_.str();
+    ofs << decorate_ss_.str();
+    ofs << type_const_def_ss_.str();
+    ofs << fn_def_ss_.str();
+}
+
 void CodeGen::push_header()
 {
     header_ss_ << "OpCapability Shader\n";
-    header_ss_ << "OpMemoryModel Logical GLSL450\n";
+}
+
+void CodeGen::push_ext_import(const ExtImportDef& eid)
+{
+    ext_import_ss_ << "%" << eid.id << " = OpExtInstImport \"" << eid.ext_name << "\"\n";
 }
 
 void CodeGen::push_entry(const EntryDef& ed)
 {
+    entry_def_ss_ << "OpMemoryModel Logical GLSL450\n";
     entry_def_ss_ << "OpEntryPoint GLCompute %" << ed.main_id << " \"main\"";
     for (auto it: ed.input_ids) {
         entry_def_ss_ << " %" << it;
@@ -167,7 +183,7 @@ void CodeGen::push_vector_dtype(const VectorDef& vd)
 
 void CodeGen::push_binary_operation(const BinaryOpDef& bod)
 {
-    fn_def_ss_ << "%" << bod.result_id << " = " << as_string(bod.bo) << " %" << bod.type_id
+    fn_def_ss_ << "\t%" << bod.result_id << " = " << as_string(bod.bo) << " %" << bod.type_id
         << " %" << bod.op1_id << " %" << bod.op2_id << "\n";
 }
 
@@ -202,11 +218,8 @@ void CodeGen::push_snippet_invo_bound_check(const InvocationBoundCheckDef& def)
     fn_def_ss_ << "\t%" << def.label_id_next << " = OpLabel\n";
 }
 
-void CodeGen::assemble(std::ofstream& ofs)
+void CodeGen::push_ext_binary_opration(const ext::BinaryOpDef& bod)
 {
-    ofs << header_ss_.str();
-    ofs << entry_def_ss_.str();
-    ofs << decorate_ss_.str();
-    ofs << type_const_def_ss_.str();
-    ofs << fn_def_ss_.str();
+    fn_def_ss_ << "\t%" << bod.result_id << " = OpExtInst %" << bod.type_id << " %" << bod.ext_id << " "
+        << as_string(bod.bo) << " %" << bod.op1_id << " %" << bod.op2_id << "\n";
 }

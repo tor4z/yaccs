@@ -1,6 +1,7 @@
 #ifndef YACCS_CODE_GEN_H_
 #define YACCS_CODE_GEN_H_
 
+#include "yaccs/code_gen/exts/def.hpp"
 #include "yaccs/dtype.hpp"
 #include "yaccs/code_gen/def.hpp"
 #include <fstream>
@@ -12,6 +13,7 @@ struct CodeGen
     void assemble(std::ofstream& ofs);
 
     void push_header();
+    void push_ext_import(const ExtImportDef& eid);
     void push_entry(const EntryDef& ed);
     void push_struct_decorate(const DecorateStructDef& dsd);
     void push_array_decorate(const DecorateArrayDef& dad);
@@ -39,8 +41,11 @@ struct CodeGen
     void push_snippet_invo_bound_check(const InvocationBoundCheckDef& def);
     template<typename T>
     void push_const_dtype(const DTypeConstDef<T>& dconst);
+
+    void push_ext_binary_opration(const ext::BinaryOpDef& bod);
 private:
     std::stringstream header_ss_;
+    std::stringstream ext_import_ss_;
     std::stringstream entry_def_ss_;
     std::stringstream decorate_ss_;
     std::stringstream type_const_def_ss_;

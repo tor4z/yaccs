@@ -1,5 +1,6 @@
 #include "yaccs/code_gen/program.hpp"
 #include "yaccs/code_gen/def.hpp"
+#include "yaccs/code_gen/exts/exts.hpp"
 #include "yaccs/code_gen/utils.hpp"
 #include "yaccs/dtype.hpp"
 #include "yaccs/tensor.hpp"
@@ -17,6 +18,7 @@
 Program::Program()
 {
     code_gen_.push_header();
+    std_450_ = ext::Ext(this, "GLSL.std.450");
 }
 
 void Program::set_name(const std::string& name)
@@ -539,21 +541,9 @@ void Program::add_relu(const OpRelu& relu)
         auto invo_y{access_invocation_index(func_id, 1)};
         auto X_shape1{access_tensor_shape_index(func_id, X.tensor_id, X.storage_class, 1)};
         auto x{load_tensor_element(func_id, X.tensor_id, X.storage_class, X.dtype, invo_x, X_shape1, invo_y)};
-        store_tensor_element(func_id, Y.tensor_id, Y.storage_class, Y.dtype, invo_x, X_shape1, invo_y, x);
-        // define relu operation
-        // auto invo_id{global_invocation_id()};
-        // auto uint32_id{add_dtype(DT_UINT32)};
-        // auto invo_id_x{add_var(uint32_id, SC_FUNCTION)};
-        // auto invo_id_x_tp{add_type_pointer(uint32_id, SC_INPUT)};
-        // auto pointer{access_chain(func_id, invo_id_x_tp, invo_id, 0)};
-        // id_t invo_x_object{load_var(uint32_id, pointer)};
-        // store_var(invo_id_x, invo_x_object);
-        // auto invo_x = gl_GlobalInvocationID.x;
-        // auto invo_y = gl_GlobalInvocationID.y;
-        // auto input = X.load(x, v);
-        // input = max(input, 0);
-        // Y.store(input);
-
+        auto relu_result{std_450_.max(X.dtype, func_id, add_const(X.dtype, 0), x)};
+        store_tensor_element(func_id, Y.tensor_id, Y.storage_class, Y.dtype, invo_x,
+            X_shape1, invo_y, relu_result);
     add_function_epilogue();
     layers_.push_back(func_id);
 }

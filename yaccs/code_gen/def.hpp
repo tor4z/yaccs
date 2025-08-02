@@ -108,6 +108,12 @@ struct TensorMeta
     StorageClass storage_class;
 }; // struct TensorMeta
 
+struct ExtImportDef
+{
+    id_t id;
+    std::string ext_name;
+}; // struct ExtImportDef
+
 struct ArrTypeDef {
     uint32_t length;
     id_t dtype;

@@ -48,7 +48,7 @@ private:
     id_t add_shared_tensor(const Tensor& tensor);
     id_t add_tensor_type(const TensorType& tensor_type, StorageClass sc, bool reuse=true);
     id_t add_type_pointer(id_t type_id, StorageClass sc);
-    id_t add_var(id_t type_id, StorageClass sc);
+    id_t add_var(id_t type_id, StorageClass sc, id_t initializer = 0);
     id_t add_raw_const(DType dtype, int elem_idx, const Tensor& tensor);
     id_t add_function_call(id_t id);
     id_t global_invocation_id();
@@ -60,20 +60,21 @@ private:
 
     id_t binary_op(BinaryOperator bo, id_t func_id, id_t type_id, id_t op1_id, id_t op2_id);
 
-    id_t access_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc);
-    id_t access_tensor_shape_index(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index);
     id_t access_invocation_index(id_t func_id, uint32_t index);
-    void invocation_boundary_check(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index);
-    id_t load_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
-        id_t index_id);
-    id_t load_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
-        id_t i, id_t step, id_t j);
-    void store_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
-        id_t index_id, id_t object_id);
-    void store_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
-        id_t i, id_t step, id_t j, id_t object_id);
-    void store_tensor_shape_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index, id_t object_id);
-    void store_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc, id_t object_id);
+
+    void invocation_boundary_check(id_t func_id, const TensorMeta& tm, uint32_t index);
+    id_t access_tensor_dims(id_t func_id, const TensorMeta& tm);
+    id_t access_tensor_shape_index(id_t func_id, const TensorMeta& tm, uint32_t index);
+    id_t load_tensor_element(id_t func_id, const TensorMeta& tm, id_t index_id);
+    id_t load_tensor_element(id_t func_id, const TensorMeta& tm, id_t i, id_t step, id_t j);
+    void store_tensor_element(id_t func_id, const TensorMeta& tm, id_t index_id, id_t object_id);
+    void store_tensor_element(id_t func_id, const TensorMeta& tm, id_t i, id_t step, id_t j, id_t object_id);
+    void store_tensor_shape_element(id_t func_id, const TensorMeta& tm, uint32_t index, id_t object_id);
+    void store_tensor_dims(id_t func_id, const TensorMeta& tm, id_t object_id);
+
+    void for_loop_init(ForLoopDef& def);
+    void for_loop_begin(const ForLoopDef& def);
+    void for_loop_end(const ForLoopDef& def);
 
     template<typename T>
     id_t add_const(DType dtype, T value);

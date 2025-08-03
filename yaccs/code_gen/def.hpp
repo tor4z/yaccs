@@ -2,7 +2,6 @@
 #define YACCS_DEF_H_
 
 #include "yaccs/dtype.hpp"
-#include "yaccs/tensor.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -80,6 +79,7 @@ enum StorageClass
     SC_CODE_SECTION_INTEL,
     SC_DEVICE_ONLY_INTEL,
     SC_HOST_ONLY_INTEL,
+    SC_GLOBAL_CONST,
     SC_NONE,
 }; // enum StorageClass
 
@@ -99,12 +99,17 @@ enum BinaryOperator
 struct TensorMeta
 {
     std::string name;
-    int shape[MAX_TENSOR_DIMS];
-    int dims;
     DType dtype;
-    id_t tensor_id;
+    id_t id;
     id_t dtype_id;
     id_t dtype_pointer_id;
+    // for const tensor
+    id_t dims_id;
+    id_t shape_id;
+    id_t data_id;
+    id_t dims_type_id;
+    id_t shape_type_id;
+    id_t data_type_id;
     StorageClass storage_class;
 }; // struct TensorMeta
 
@@ -151,6 +156,7 @@ struct FunctionHeaderDef
 {
     id_t return_type_id;
     id_t function_type_id;
+    id_t open_label_id;
     id_t id;
 }; // struct FunctionHeaderDef
 
@@ -158,6 +164,7 @@ struct VarDef
 {
     id_t id;
     id_t type_pointer_id;
+    id_t initializer_id;
     StorageClass storage_class;
 }; // struct VarDef
 
@@ -278,6 +285,7 @@ struct AccessInvocationEelementDef
 struct AccessTensorShapeEelementDef
 {
     id_t id;
+    id_t base_id;
     id_t tensor_id;
     id_t func_id;
     id_t shape_comp_type_ptr_id;
@@ -295,5 +303,27 @@ struct BinaryOpDef
     id_t op2_id;
     BinaryOperator bo;
 }; // struct BinaryOpDef
+
+struct ForLoopDef
+{
+    enum CmpOp {
+        CO_UNKNOWN = 0,
+        CO_GT,
+        CO_GE,
+        CO_LT,
+        CO_LE,
+        CO_EQ,
+        CO_NE,
+    }; // enum CmpOp
+
+    id_t i_id;
+    id_t i_type_id;
+    id_t i_type_ptr_id;
+    id_t i_boundary_id;
+    id_t init_label_id;
+    id_t cond_label_id;
+    id_t i_inc_label_id;
+    id_t loop_exit_label_id;
+}; // struct ForLoopDef
 
 #endif // YACCS_DEF_H_

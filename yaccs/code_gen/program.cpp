@@ -4,9 +4,9 @@
 #include "yaccs/code_gen/utils.hpp"
 #include "yaccs/dtype.hpp"
 #include "yaccs/tensor.hpp"
+#include <unordered_map>
 #include <cstddef>
 #include <cstdint>
-#include <unordered_map>
 #include <cassert>
 #include <cstring>
 #include <fstream>
@@ -75,13 +75,11 @@ void Program::add_input(const TensorType& tensor_type)
 
     TensorMeta tm;
     tm.name = tensor_type.name;
-    tm.dims = tensor_type.dims;
     tm.dtype = tensor_type.dtype;
     tm.storage_class = storage_class;
-    tm.tensor_id = var_id;
+    tm.id = var_id;
     tm.dtype_id = add_dtype(tensor_type.dtype);
     tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_class);
-    memcpy(tm.shape, tensor_type.shape, sizeof(tensor_type.shape[0]) * MAX_TENSOR_DIMS);
     global_tensors_.insert(std::make_pair(tensor_type.name, tm));
 }
 
@@ -107,13 +105,11 @@ void Program::add_output(const TensorType& tensor_type)
 
     TensorMeta tm;
     tm.name = tensor_type.name;
-    tm.dims = tensor_type.dims;
     tm.dtype = tensor_type.dtype;
     tm.storage_class = storage_class;
-    tm.tensor_id = var_id;
+    tm.id = var_id;
     tm.dtype_id = add_dtype(tensor_type.dtype);
     tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_class);
-    memcpy(tm.shape, tensor_type.shape, sizeof(tensor_type.shape[0]) * MAX_TENSOR_DIMS);
     global_tensors_.insert(std::make_pair(tensor_type.name, tm));
 }
 
@@ -156,10 +152,11 @@ id_t Program::add_type_pointer(id_t type_id, StorageClass sc)
     return tpd.id;
 }
 
-id_t Program::add_var(id_t type_id, StorageClass sc)
+id_t Program::add_var(id_t type_id, StorageClass sc, id_t initializer)
 {
     VarDef vd;
     vd.id = alloc_id();
+    vd.initializer_id = initializer;
     vd.storage_class = sc;
     vd.type_pointer_id = add_type_pointer(type_id, sc);
     code_gen_.push_variable(vd);
@@ -330,6 +327,7 @@ id_t Program::add_const_tensor(const Tensor& tensor)
     sd.type_id = tensor_type_id;
 
     // setup dims
+    auto dims_type_id{add_dtype(DT_UINT32)};
     sd.elem_ids.push_back(add_const(DT_UINT32, tensor.tt.dims));
 
     // setup shape
@@ -340,8 +338,8 @@ id_t Program::add_const_tensor(const Tensor& tensor)
         shape.at(i) = add_const(DT_UINT32, i < tensor.tt.dims ? tensor.tt.shape[i] : 0);
     }
     auto uint_id{add_dtype(DT_UINT32)};
-    auto shape_id{add_array_dtype(uint_id, MAX_TENSOR_DIMS, SC_NONE)};
-    sd.elem_ids.push_back(add_const_array(shape_id, shape));
+    auto shape_type_id{add_array_dtype(uint_id, MAX_TENSOR_DIMS, SC_GLOBAL_CONST)};
+    sd.elem_ids.push_back(add_const_array(shape_type_id, shape));
 
     // setup data
     std::vector<id_t> data(num_elems);
@@ -349,8 +347,8 @@ id_t Program::add_const_tensor(const Tensor& tensor)
         data.at(i) = add_raw_const(tensor.tt.dtype, i, tensor);
     }
     auto dtype_id{add_dtype(tensor.tt.dtype)};
-    auto data_id{add_array_dtype(dtype_id, num_elems, SC_NONE)};
-    sd.elem_ids.push_back(add_const_array(data_id, data));
+    auto data_type_id{add_array_dtype(dtype_id, num_elems, SC_GLOBAL_CONST)};
+    sd.elem_ids.push_back(add_const_array(data_type_id, data));
 
     auto const_struct_matched{[&sd] (const ConstCompositeDef& target) -> bool {
         if (target.type_id != sd.type_id) {
@@ -376,12 +374,16 @@ id_t Program::add_const_tensor(const Tensor& tensor)
 
     TensorMeta tm;
     tm.name = tensor.tt.name;
-    tm.dims = tensor.tt.dims;
     tm.dtype = tensor.tt.dtype;
-    tm.tensor_id = sd.id;
-    tm.storage_class = SC_NONE;
+    tm.id = sd.id;
+    tm.dims_id = sd.elem_ids.at(0);
+    tm.shape_id = sd.elem_ids.at(1);
+    tm.data_id = sd.elem_ids.at(2);
+    tm.dims_type_id = dims_type_id;
+    tm.shape_type_id = shape_type_id;
+    tm.data_type_id = data_type_id;
+    tm.storage_class = SC_GLOBAL_CONST;
     tm.dtype_id = add_dtype(tensor.tt.dtype);
-    memcpy(tm.shape, tensor.tt.shape, sizeof(tensor.tt.shape[0]) * MAX_TENSOR_DIMS);
     global_tensors_.insert(std::make_pair(tensor.tt.name, tm));
 
     return sd.id;
@@ -395,17 +397,16 @@ id_t Program::add_shared_tensor(const Tensor& tensor)
     VarDef vd;
     vd.type_pointer_id = add_type_pointer(tensor_type_id, storage_class);
     vd.storage_class = storage_class;
+    vd.initializer_id = 0;
     vd.id = alloc_id();
     code_gen_.push_variable(vd);
 
     TensorMeta tm;
     tm.name = tensor.tt.name;
-    tm.dims = tensor.tt.dims;
     tm.dtype = tensor.tt.dtype;
-    tm.tensor_id = vd.id;
+    tm.id = vd.id;
     tm.storage_class = storage_class;
     tm.dtype_id = add_dtype(tensor.tt.dtype);
-    memcpy(tm.shape, tensor.tt.shape, sizeof(tensor.tt.shape[0]) * MAX_TENSOR_DIMS);
     global_tensors_.insert(std::make_pair(tensor.tt.name, tm));
 
     return vd.id;
@@ -484,17 +485,20 @@ id_t Program::add_label()
 id_t Program::add_function_prologue(id_t return_type_id)
 {
     auto fn_type_id{add_function_type(return_type_id)};
-    FunctionHeaderDef fh{.return_type_id = return_type_id, .function_type_id = fn_type_id, .id = alloc_id()};
+    FunctionHeaderDef fh{
+        .return_type_id = return_type_id,
+        .function_type_id = fn_type_id,
+        .open_label_id = alloc_id(),
+        .id = alloc_id()
+    };
 
     global_funcs_.insert(std::make_pair(fh.id, fh));
     code_gen_.push_function(fh); 
-    auto label_id{add_label()};
     return fh.id;
 }
 
 void Program::add_function_epilogue()
 {
-    code_gen_.push_return();
     code_gen_.push_function_end();
 }
 
@@ -514,6 +518,20 @@ void Program::add_gemm(const OpGemm& gemm)
         const auto& C{global_tensors_.at(gemm.C.tt.name)};
         const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
 
+        auto A_shape0{access_tensor_shape_index(func_id, A, 0)};
+        auto B_shape1{access_tensor_shape_index(func_id, B, 1)};
+        store_tensor_shape_element(func_id, Y, 0, A_shape0);
+        store_tensor_shape_element(func_id, Y, 1, B_shape1);
+        auto A_dims_id{access_tensor_dims(func_id, A)};
+        store_tensor_dims(func_id, Y, A_dims_id);
+
+        // ForLoopDef for_def;
+        // for_def.i_boundary_id = access_tensor_shape_index(func_id, Y, 1);
+        // for_loop_init(for_def);
+        // for_loop_begin(for_def);
+        //     // loop block
+        // for_loop_end(for_def);
+
     add_function_epilogue();
     layers_.push_back(func_id);
 }
@@ -527,30 +545,27 @@ void Program::add_relu(const OpRelu& relu)
         // infer Y from X
         Tensor tensor_Y;
         tensor_Y.tt.name = relu.Y.tt.name;
-        tensor_Y.tt.dims = X.dims;
         tensor_Y.tt.dtype = X.dtype;
         tensor_Y.tt.row_major = true;
-        memcpy(tensor_Y.tt.shape, X.shape, MAX_TENSOR_DIMS * sizeof(X.shape[0]));
         add_shared_tensor(tensor_Y);
         const auto& Y{global_tensors_.at(relu.Y.tt.name)};
 
-        invocation_boundary_check(func_id, Y.tensor_id, SC_WORKGROUP, 0);
-        invocation_boundary_check(func_id, Y.tensor_id, SC_WORKGROUP, 1);
+        invocation_boundary_check(func_id, Y, 0);
+        invocation_boundary_check(func_id, Y, 1);
 
         auto invo_x{access_invocation_index(func_id, 0)};
         auto invo_y{access_invocation_index(func_id, 1)};
-        auto X_shape0{access_tensor_shape_index(func_id, X.tensor_id, X.storage_class, 0)};
-        auto X_shape1{access_tensor_shape_index(func_id, X.tensor_id, X.storage_class, 1)};
-        auto x{load_tensor_element(func_id, X.tensor_id, X.storage_class, X.dtype, invo_x, X_shape1, invo_y)};
+        auto X_shape0{access_tensor_shape_index(func_id, X, 0)};
+        auto X_shape1{access_tensor_shape_index(func_id, X, 1)};
+        auto x{load_tensor_element(func_id, X, invo_x, X_shape1, invo_y)};
         auto relu_result{std_450_.max(X.dtype, func_id, add_const(X.dtype, 0), x)};
-        store_tensor_element(func_id, Y.tensor_id, Y.storage_class, Y.dtype, invo_x,
-            X_shape1, invo_y, relu_result);
+        store_tensor_element(func_id, Y, invo_x, X_shape1, invo_y, relu_result);
 
-        
-        store_tensor_shape_element(func_id, Y.tensor_id, Y.storage_class, 0, X_shape0);
-        store_tensor_shape_element(func_id, Y.tensor_id, Y.storage_class, 1, X_shape1);
-        auto X_dims_id{access_tensor_dims(func_id, X.tensor_id, X.storage_class)};
-        store_tensor_dims(func_id, Y.tensor_id, Y.storage_class, X_dims_id);
+        /// TODO: run only once
+        store_tensor_shape_element(func_id, Y, 0, X_shape0);
+        store_tensor_shape_element(func_id, Y, 1, X_shape1);
+        auto X_dims_id{access_tensor_dims(func_id, X)};
+        store_tensor_dims(func_id, Y, X_dims_id);
 
     add_function_epilogue();
     layers_.push_back(func_id);
@@ -667,31 +682,53 @@ id_t Program::access_chain_indices(id_t func_id, id_t type_id, id_t base_id, con
     return access_chain(func_id, type_id, base_id, index_ids);
 }
 
-id_t Program::access_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc)
+id_t Program::access_tensor_dims(id_t func_id, const TensorMeta& tm)
 {
+    std::vector<uint32_t> access_indices{};
+    if (tm.storage_class == SC_UNIFORM) {
+        access_indices = {0, 0};
+    } else if (tm.storage_class == SC_GLOBAL_CONST) {
+        return tm.dims_id;
+    } else {
+        access_indices = {0};
+    }
+
     auto dims_type_id = add_dtype(DT_UINT32);
-    auto dims_type_ptr_id = add_type_pointer(dims_type_id, tensor_sc);
-    auto dims_ptr_id = access_chain_indices(func_id, dims_type_ptr_id, tensor_id, {0});
+    auto dims_type_ptr_id = add_type_pointer(dims_type_id, storage_class_for_accessment(tm.storage_class));
+    auto dims_ptr_id = access_chain_indices(func_id, dims_type_ptr_id, tm.id, access_indices);
     return load_var(dims_type_id, dims_ptr_id);
 }
 
-id_t Program::access_tensor_shape_index(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index)
+id_t Program::access_tensor_shape_index(id_t func_id, const TensorMeta& tm, uint32_t index)
 {
     static std::vector<AccessTensorShapeEelementDef> dfs;
     AccessTensorShapeEelementDef def;
 
     for (const auto& it: dfs) {
-        if (it.func_id == func_id && it.index == index) {
+        if (it.func_id == func_id && it.tensor_id == tm.id && it.index == index) {
             return it.id;
         }
     }
 
-    def.tensor_id = tensor_id;
+    def.tensor_id = tm.id;
+    def.base_id = def.tensor_id;
     def.func_id = func_id;
     def.index = index;
+
+    std::vector<uint32_t> access_indices{};
+    if (tm.storage_class == SC_UNIFORM) {
+        access_indices = {0, 1, index};
+    } else if (tm.storage_class == SC_GLOBAL_CONST) {
+        add_type_pointer(tm.shape_type_id, SC_FUNCTION);
+        def.base_id = add_var(tm.shape_type_id, SC_FUNCTION, tm.shape_id);
+        access_indices = {index};
+    } else {
+        access_indices = {1, index};
+    }
+
     def.shape_comp_type_id = add_dtype(DT_UINT32);
-    def.shape_comp_type_ptr_id = add_type_pointer(def.shape_comp_type_id, tensor_sc);
-    def.shape_comp_ptr_id = access_chain_indices(func_id, def.shape_comp_type_ptr_id, tensor_id, {1, index});
+    def.shape_comp_type_ptr_id = add_type_pointer(def.shape_comp_type_id, storage_class_for_accessment(tm.storage_class));
+    def.shape_comp_ptr_id = access_chain_indices(func_id, def.shape_comp_type_ptr_id, def.base_id, access_indices);
     def.id = load_var(def.shape_comp_type_id, def.shape_comp_ptr_id);
 
     dfs.push_back(def);
@@ -721,7 +758,7 @@ id_t Program::access_invocation_index(id_t func_id, uint32_t index)
     return def.id;
 }
 
-void Program::invocation_boundary_check(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index)
+void Program::invocation_boundary_check(id_t func_id, const TensorMeta& tm, uint32_t index)
 {
     InvocationBoundCheckDef def;
     def.label_id_ret = alloc_id();
@@ -729,46 +766,56 @@ void Program::invocation_boundary_check(id_t func_id, id_t tensor_id, StorageCla
     def.bool_type_id = add_dtype(DT_BOOL);
     def.condition_id = alloc_id();
     def.invo_comp_id = access_invocation_index(func_id, index);
-    def.tensor_shape_comp_id = access_tensor_shape_index(func_id, tensor_id, tensor_sc, index);
+    def.tensor_shape_comp_id = access_tensor_shape_index(func_id, tm, index);
     code_gen_.push_snippet_invo_bound_check(def);
 }
 
-id_t Program::load_tensor_element(id_t func_id, id_t tensor_id,
-    StorageClass tensor_sc, DType tensor_dtype, id_t index_id)
+id_t Program::load_tensor_element(id_t func_id, const TensorMeta& tm, id_t index_id)
 {
-    auto data_index{add_const(DT_UINT32, 2)};
-    auto tensor_dtype_id{add_dtype(tensor_dtype)};
-    auto tensor_dtype_ptr_id{add_type_pointer(tensor_dtype_id, tensor_sc)};
-    auto ptr{access_chain(func_id, tensor_dtype_ptr_id, tensor_id, {data_index, index_id})};
+    std::vector<id_t> access_index_ids{};
+    auto data_index_id{add_const(DT_UINT32, 2)};
+    auto tensor_index_id{add_const(DT_UINT32, 0)}; // for uniform input
+
+    id_t base_id{tm.id};
+    if (tm.storage_class == SC_UNIFORM) {
+        access_index_ids = {tensor_index_id, data_index_id, index_id};
+    } else if (tm.storage_class == SC_GLOBAL_CONST) {
+        add_type_pointer(tm.shape_type_id, SC_FUNCTION);
+        base_id = add_var(tm.shape_type_id, SC_FUNCTION, tm.data_id);
+        access_index_ids = {index_id};
+    } else {
+        access_index_ids = {data_index_id, index_id};
+    }
+
+    auto tensor_dtype_id{add_dtype(tm.dtype)};
+    auto tensor_dtype_ptr_id{add_type_pointer(tensor_dtype_id, storage_class_for_accessment(tm.storage_class))};
+    auto ptr{access_chain(func_id, tensor_dtype_ptr_id, base_id, access_index_ids)};
     return load_var(tensor_dtype_id, ptr);
 }
 
-id_t Program::load_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
-    id_t i, id_t step, id_t j)
+id_t Program::load_tensor_element(id_t func_id, const TensorMeta& tm, id_t i, id_t step, id_t j)
 {
     auto type_id{add_dtype(DT_UINT32)};
     auto i_mul_step{binary_op(BO_IMUL, func_id, type_id, i, step)};
     id_t index_id{binary_op(BO_IADD, func_id, type_id, i_mul_step, j)};
-    return load_tensor_element(func_id, tensor_id, tensor_sc, tensor_dtype, index_id);
+    return load_tensor_element(func_id, tm, index_id);
 }
 
-void Program::store_tensor_element(id_t func_id, id_t tensor_id,
-    StorageClass tensor_sc, DType tensor_dtype, id_t index_id, id_t object_id)
+void Program::store_tensor_element(id_t func_id, const TensorMeta& tm, id_t index_id, id_t object_id)
 {
     auto data_index{add_const(DT_UINT32, 2)};
-    auto tensor_dtype_id{add_dtype(tensor_dtype)};
-    auto tensor_dtype_ptr_id{add_type_pointer(tensor_dtype_id, tensor_sc)};
-    auto ptr{access_chain(func_id, tensor_dtype_ptr_id, tensor_id, {data_index, index_id})};
+    auto tensor_dtype_id{add_dtype(tm.dtype)};
+    auto tensor_dtype_ptr_id{add_type_pointer(tensor_dtype_id, tm.storage_class)};
+    auto ptr{access_chain(func_id, tensor_dtype_ptr_id, tm.id, {data_index, index_id})};
     store_var(ptr, object_id);
 }
 
-void Program::store_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
-    id_t i, id_t step, id_t j, id_t object_id)
+void Program::store_tensor_element(id_t func_id, const TensorMeta& tm, id_t i, id_t step, id_t j, id_t object_id)
 {
     auto type_id{add_dtype(DT_UINT32)};
     auto i_mul_step{binary_op(BO_IMUL, func_id, type_id, i, step)};
     id_t index_id{binary_op(BO_IADD, func_id, type_id, i_mul_step, j)};
-    store_tensor_element(func_id, tensor_id, tensor_sc, tensor_dtype, index_id, object_id);
+    store_tensor_element(func_id, tm, index_id, object_id);
 }
 
 id_t Program::binary_op(BinaryOperator bo, id_t func_id, id_t type_id, id_t op1_id, id_t op2_id)
@@ -793,22 +840,53 @@ id_t Program::binary_op(BinaryOperator bo, id_t func_id, id_t type_id, id_t op1_
     return bod.result_id;
 }
 
-void Program::store_tensor_shape_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index, id_t object_id)
+void Program::store_tensor_shape_element(id_t func_id, const TensorMeta& tm, uint32_t index, id_t object_id)
 {
     auto shape_base_index_id{add_const(DT_UINT32, 1)};
     auto shape_index_id{add_const(DT_UINT32, index)};
     auto shape_type_id{add_dtype(DT_UINT32)};
-    auto shape_type_ptr_id{add_type_pointer(shape_type_id, tensor_sc)};
-    auto ptr{access_chain(func_id, shape_type_ptr_id, tensor_id, {shape_base_index_id, shape_index_id})};
+    auto shape_type_ptr_id{add_type_pointer(shape_type_id, tm.storage_class)};
+
+    std::vector<id_t> access_index_ids{};
+    if (tm.storage_class == SC_UNIFORM) {
+        auto tensor_index_id{add_const(DT_UINT32, 0)}; // for uniform input
+        access_index_ids = {tensor_index_id, shape_base_index_id, shape_index_id};
+    } else {
+        access_index_ids = {shape_base_index_id, shape_index_id};
+    }
+
+    auto ptr{access_chain(func_id, shape_type_ptr_id, tm.id, access_index_ids)};
     store_var(ptr, object_id);
 }
 
-void Program::store_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc, id_t object_id)
+void Program::store_tensor_dims(id_t func_id, const TensorMeta& tm, id_t object_id)
 {
+    std::vector<uint32_t> access_indices{};
+    if (tm.storage_class == SC_UNIFORM) {
+        access_indices = {0, 0};
+    } else {
+        access_indices = {0};
+    }
+
     auto dims_type_id{add_dtype(DT_UINT32)};
-    auto dims_type_ptr_id{add_type_pointer(dims_type_id, tensor_sc)};
-    auto ptr{access_chain_indices(func_id, dims_type_ptr_id, tensor_id, {0})};
+    auto dims_type_ptr_id{add_type_pointer(dims_type_id, tm.storage_class)};
+    auto ptr{access_chain_indices(func_id, dims_type_ptr_id, tm.id, access_indices)};
     store_var(ptr, object_id);
+}
+
+void Program::for_loop_init(ForLoopDef& def)
+{
+
+}
+
+void Program::for_loop_begin(const ForLoopDef& def)
+{
+
+}
+
+void Program::for_loop_end(const ForLoopDef& def)
+{
+
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

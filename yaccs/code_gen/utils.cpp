@@ -2,6 +2,13 @@
 #include "yaccs/code_gen/def.hpp"
 #include <cassert>
 
+StorageClass storage_class_for_accessment(StorageClass sc)
+{
+    switch (sc) {
+    case SC_GLOBAL_CONST:   return SC_FUNCTION;
+    default:                return sc;
+    }
+}
 
 const std::string& as_string(StorageClass sc)
 {

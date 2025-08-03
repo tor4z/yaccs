@@ -10,7 +10,7 @@
 inline id_t alloc_id()
 {
     static std::mutex locker;
-    static id_t cnt{1};
+    static id_t cnt{1}; // mark 0 as invalid id
 
     std::lock_guard<std::mutex> guard(locker);
     id_t result{cnt};
@@ -53,6 +53,8 @@ inline bool should_decorate(StorageClass sc)
     default:            return false;
     }
 }
+
+StorageClass storage_class_for_accessment(StorageClass sc);
 
 const std::string& as_string(StorageClass sc);
 const std::string& as_string(Decoration deco);

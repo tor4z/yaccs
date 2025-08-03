@@ -539,11 +539,19 @@ void Program::add_relu(const OpRelu& relu)
 
         auto invo_x{access_invocation_index(func_id, 0)};
         auto invo_y{access_invocation_index(func_id, 1)};
+        auto X_shape0{access_tensor_shape_index(func_id, X.tensor_id, X.storage_class, 0)};
         auto X_shape1{access_tensor_shape_index(func_id, X.tensor_id, X.storage_class, 1)};
         auto x{load_tensor_element(func_id, X.tensor_id, X.storage_class, X.dtype, invo_x, X_shape1, invo_y)};
         auto relu_result{std_450_.max(X.dtype, func_id, add_const(X.dtype, 0), x)};
         store_tensor_element(func_id, Y.tensor_id, Y.storage_class, Y.dtype, invo_x,
             X_shape1, invo_y, relu_result);
+
+        
+        store_tensor_shape_element(func_id, Y.tensor_id, Y.storage_class, 0, X_shape0);
+        store_tensor_shape_element(func_id, Y.tensor_id, Y.storage_class, 1, X_shape1);
+        auto X_dims_id{access_tensor_dims(func_id, X.tensor_id, X.storage_class)};
+        store_tensor_dims(func_id, Y.tensor_id, Y.storage_class, X_dims_id);
+
     add_function_epilogue();
     layers_.push_back(func_id);
 }
@@ -657,6 +665,14 @@ id_t Program::access_chain_indices(id_t func_id, id_t type_id, id_t base_id, con
     }
 
     return access_chain(func_id, type_id, base_id, index_ids);
+}
+
+id_t Program::access_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc)
+{
+    auto dims_type_id = add_dtype(DT_UINT32);
+    auto dims_type_ptr_id = add_type_pointer(dims_type_id, tensor_sc);
+    auto dims_ptr_id = access_chain_indices(func_id, dims_type_ptr_id, tensor_id, {0});
+    return load_var(dims_type_id, dims_ptr_id);
 }
 
 id_t Program::access_tensor_shape_index(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index)
@@ -775,6 +791,24 @@ id_t Program::binary_op(BinaryOperator bo, id_t func_id, id_t type_id, id_t op1_
 
     code_gen_.push_binary_operation(bod);
     return bod.result_id;
+}
+
+void Program::store_tensor_shape_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index, id_t object_id)
+{
+    auto shape_base_index_id{add_const(DT_UINT32, 1)};
+    auto shape_index_id{add_const(DT_UINT32, index)};
+    auto shape_type_id{add_dtype(DT_UINT32)};
+    auto shape_type_ptr_id{add_type_pointer(shape_type_id, tensor_sc)};
+    auto ptr{access_chain(func_id, shape_type_ptr_id, tensor_id, {shape_base_index_id, shape_index_id})};
+    store_var(ptr, object_id);
+}
+
+void Program::store_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc, id_t object_id)
+{
+    auto dims_type_id{add_dtype(DT_UINT32)};
+    auto dims_type_ptr_id{add_type_pointer(dims_type_id, tensor_sc)};
+    auto ptr{access_chain_indices(func_id, dims_type_ptr_id, tensor_id, {0})};
+    store_var(ptr, object_id);
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

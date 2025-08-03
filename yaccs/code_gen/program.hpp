@@ -60,6 +60,7 @@ private:
 
     id_t binary_op(BinaryOperator bo, id_t func_id, id_t type_id, id_t op1_id, id_t op2_id);
 
+    id_t access_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc);
     id_t access_tensor_shape_index(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index);
     id_t access_invocation_index(id_t func_id, uint32_t index);
     void invocation_boundary_check(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index);
@@ -71,6 +72,8 @@ private:
         id_t index_id, id_t object_id);
     void store_tensor_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, DType tensor_dtype,
         id_t i, id_t step, id_t j, id_t object_id);
+    void store_tensor_shape_element(id_t func_id, id_t tensor_id, StorageClass tensor_sc, uint32_t index, id_t object_id);
+    void store_tensor_dims(id_t func_id, id_t tensor_id, StorageClass tensor_sc, id_t object_id);
 
     template<typename T>
     id_t add_const(DType dtype, T value);

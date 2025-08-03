@@ -150,12 +150,12 @@ void CodeGen::push_label(id_t id)
 
 void CodeGen::push_return()
 {
-    fn_def_ss_ << "\tOpReturn\n";
+    fn_def_ss_ << "\t\tOpReturn\n";
 }
 
 void CodeGen::push_function_end()
 {
-    fn_def_ss_ << "\tOpFunctionEnd\n";
+    fn_def_ss_ << "\t\tOpFunctionEnd\n";
 }
 
 void CodeGen::push_function_call(const FunctionCallDef& fcd)
@@ -194,7 +194,7 @@ void CodeGen::push_load(const LoadDef& ld)
 
 void CodeGen::push_store(const StoreDef& sd)
 {
-    fn_def_ss_ << "\tOpStore %" << sd.pointer << " %" << sd.object << "\n";
+    fn_def_ss_ << "\t\tOpStore %" << sd.pointer << " %" << sd.object << "\n";
 }
 
 void CodeGen::push_access_chain(const AccessChainDef& acd)

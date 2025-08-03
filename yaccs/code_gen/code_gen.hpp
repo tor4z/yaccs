@@ -18,38 +18,51 @@ struct CodeGen
     void push_struct_decorate(const DecorateStructDef& dsd);
     void push_array_decorate(const DecorateArrayDef& dad);
     void push_builtin_decorate(const DecorateBuiltInDef& built_in);
-    void push_label(id_t id);
-    void push_return();
-    void push_function_end();
+    void push_decorate_set_binding(const DecorateSetBindingDef& deco);
     void push_dtype(DType dt, id_t id);
-    void push_function(const FunctionHeaderDef& fh);
     void push_array_dtype(const ArrTypeDef& arr);
     void push_struct_dtype(const StructTypeDef& sd);
     void push_void_type(id_t id);
-    void push_function_type(const FunctionTypeDef& ft);
-    void push_decorate_set_binding(const DecorateSetBindingDef& deco);
     void push_const_composite(const ConstCompositeDef& ccd);
-    void push_variable(const VarDef& var);
+    void push_function_type(const FunctionTypeDef& ft);
     void push_type_pointer(const TypePointerDef& tp);
-    void push_function_call(const FunctionCallDef& fcd);
-    void push_control_barrier(const ControlBarrierDef& cbd);
     void push_vector_dtype(const VectorDef& vd);
+    void push_variable(const VarDef& var);
+    template<typename T>
+    void push_const_dtype(const DTypeConstDef<T>& dconst);
+
+    // for function
+    void push_label(id_t id);
+    void push_return();
+    void push_function_end();
+    void push_function(const FunctionHeaderDef& fh);
+    void push_control_barrier(const ControlBarrierDef& cbd);
+    void push_function_call(const FunctionCallDef& fcd);
     void push_binary_operation(const BinaryOpDef& bod);
     void push_load(const LoadDef& ld);
     void push_store(const StoreDef& sd);
     void push_access_chain(const AccessChainDef& acd);
     void push_snippet_invo_bound_check(const InvocationBoundCheckDef& def);
-    template<typename T>
-    void push_const_dtype(const DTypeConstDef<T>& dconst);
 
+    // for ext
     void push_ext_binary_opration(const ext::BinaryOpDef& bod);
 private:
+    struct FnCodeGen {
+        std::stringstream prologue_ss;
+        std::stringstream var_def_ss;
+        std::stringstream body_ss;
+        std::stringstream epilogue_ss;
+        void clear();
+    }; // struct FnCodeGen
+
     std::stringstream header_ss_;
     std::stringstream ext_import_ss_;
     std::stringstream entry_def_ss_;
     std::stringstream decorate_ss_;
     std::stringstream type_const_def_ss_;
+
     std::stringstream fn_def_ss_;
+    FnCodeGen this_fn_;
 }; // class CodeGen
 
 template<typename T>

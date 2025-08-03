@@ -1,7 +1,6 @@
 #include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/code_gen/def.hpp"
 #include "yaccs/code_gen/utils.hpp"
-#include "yaccs/code_gen/exts/utils.hpp"
 #include "yaccs/dtype.hpp"
 #include <cassert>
 #include <cstddef>
@@ -127,46 +126,17 @@ void CodeGen::push_type_pointer(const TypePointerDef& tp)
 
 void CodeGen::push_variable(const VarDef& var)
 {
+    auto& ss{var.storage_class == SC_FUNCTION ? this_fn_.var_def_ss : type_const_def_ss_};
     if (var.storage_class == SC_FUNCTION) {
-        fn_def_ss_ << "\t%" << var.id << " = OpVariable %" << var.type_pointer_id
-            << " " << as_string(var.storage_class) << "\n";
-    } else {
-        type_const_def_ss_ << "%" << var.id << " = OpVariable %" << var.type_pointer_id
-            << " " << as_string(var.storage_class) << "\n";
+        ss << "\t";
     }
-}
 
-void CodeGen::push_function(const FunctionHeaderDef& fh)
-{
-    fn_def_ss_ << "\n";
-    fn_def_ss_ << "%" << fh.id << " = OpFunction " << "%" << fh.return_type_id
-        << " None %" << fh.function_type_id << "\n";
-}
-
-void CodeGen::push_label(id_t id)
-{
-    fn_def_ss_ << "\t%" << id << " = OpLabel\n";
-}
-
-void CodeGen::push_return()
-{
-    fn_def_ss_ << "\t\tOpReturn\n";
-}
-
-void CodeGen::push_function_end()
-{
-    fn_def_ss_ << "\t\tOpFunctionEnd\n";
-}
-
-void CodeGen::push_function_call(const FunctionCallDef& fcd)
-{
-    fn_def_ss_ << "\t%" << fcd.id << " = OpFunctionCall %" << fcd.return_type_id << " %" << fcd.func_id << "\n";
-}
-
-void CodeGen::push_control_barrier(const ControlBarrierDef& cbd)
-{
-    fn_def_ss_ << "\t\tOpControlBarrier %"
-        << cbd.exe_scope_id << " %" << cbd.mem_scope_id << " %" << cbd.mem_semantics_id << "\n";
+    ss << "%" << var.id << " = OpVariable %" << var.type_pointer_id << " " << as_string(var.storage_class);
+    if (var.initializer_id == 0) {
+        ss << "\n";
+    } else {
+        ss << " %" << var.initializer_id << "\n";
+    }
 }
 
 void CodeGen::push_decorate_set_binding(const DecorateSetBindingDef& deco)
@@ -179,47 +149,4 @@ void CodeGen::push_decorate_set_binding(const DecorateSetBindingDef& deco)
 void CodeGen::push_vector_dtype(const VectorDef& vd)
 {
     type_const_def_ss_ << "%" << vd.id << " = OpTypeVector %" << vd.component_type_id << " " << vd.count << "\n";
-}
-
-void CodeGen::push_binary_operation(const BinaryOpDef& bod)
-{
-    fn_def_ss_ << "\t%" << bod.result_id << " = " << as_string(bod.bo) << " %" << bod.type_id
-        << " %" << bod.op1_id << " %" << bod.op2_id << "\n";
-}
-
-void CodeGen::push_load(const LoadDef& ld)
-{
-    fn_def_ss_ << "\t%" << ld.id << " = OpLoad %" << ld.type_id << " %" << ld.pointer << "\n";
-}
-
-void CodeGen::push_store(const StoreDef& sd)
-{
-    fn_def_ss_ << "\t\tOpStore %" << sd.pointer << " %" << sd.object << "\n";
-}
-
-void CodeGen::push_access_chain(const AccessChainDef& acd)
-{
-    fn_def_ss_ << "\t%" << acd.id << " = OpAccessChain %" << acd.type_id << " %" << acd.base_id;
-    for (auto it: acd.index_ids) {
-        fn_def_ss_ << " %" << it;
-    }
-    fn_def_ss_ << "\n";
-}
-
-void CodeGen::push_snippet_invo_bound_check(const InvocationBoundCheckDef& def)
-{
-    fn_def_ss_ << "\t%" << def.condition_id << " = OpUGreaterThan %" << def.bool_type_id
-        << " %" << def.invo_comp_id << " %" << def.tensor_shape_comp_id << "\n";
-    fn_def_ss_ << "\t\tOpSelectionMerge %" << def.label_id_next << " None\n";
-    fn_def_ss_ << "\t\tOpBranchConditional %" << def.condition_id << " %"
-        << def.label_id_ret << " %" << def.label_id_next << "\n";
-    fn_def_ss_ << "\t%" << def.label_id_ret << " = OpLabel\n";
-    fn_def_ss_ << "\t\tOpReturn\n";
-    fn_def_ss_ << "\t%" << def.label_id_next << " = OpLabel\n";
-}
-
-void CodeGen::push_ext_binary_opration(const ext::BinaryOpDef& bod)
-{
-    fn_def_ss_ << "\t%" << bod.result_id << " = OpExtInst %" << bod.type_id << " %" << bod.ext_id << " "
-        << as_string(bod.bo) << " %" << bod.op1_id << " %" << bod.op2_id << "\n";
 }

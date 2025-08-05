@@ -547,6 +547,9 @@ void Program::add_gemm(const OpGemm& gemm)
             auto this_element_val{load_var(Y.dtype_id, this_element_var)};
             auto this_element_accu{binary_op(bo_add, func_id, Y.dtype_id, AB_mul, this_element_val)};
             store_var(this_element_var, this_element_accu);
+            /// TODO: check for matrix transpose
+            /// TODO: check alpha, beta value
+            /// TODO: add with bias
         end_for(for_def);
 
         auto Y_shape1{access_tensor_shape_index(func_id, Y, 1)};

@@ -92,8 +92,10 @@ enum BuiltIn
 enum BinaryOperator
 {
     BO_UNDEFINED = 0,
-    BO_IMUL = 1,
-    BO_IADD = 2,
+    BO_IMUL,
+    BO_IADD,
+    BO_FMUL,
+    BO_FADD,
 }; // enum BinaryOperator
 
 struct TensorMeta
@@ -316,14 +318,21 @@ struct ForLoopDef
         CO_NE,
     }; // enum CmpOp
 
-    id_t i_id;
-    id_t i_type_id;
+    id_t i_var_id;
     id_t i_type_ptr_id;
     id_t i_boundary_id;
+    id_t inc_amount_id;
+    
     id_t init_label_id;
+    id_t loop_body_label_id;
     id_t cond_label_id;
     id_t i_inc_label_id;
     id_t loop_exit_label_id;
+    
+    id_t i_type_id;
+    id_t bool_type_id;
+    id_t cmp_id;
+    CmpOp cmp_op;
 }; // struct ForLoopDef
 
 #endif // YACCS_DEF_H_

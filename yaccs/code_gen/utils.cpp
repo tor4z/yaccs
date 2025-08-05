@@ -112,12 +112,37 @@ const std::string& as_string(BinaryOperator bo)
 {
     static const std::string iadd{"OpIAdd"};
     static const std::string imul{"OpIMul"};
+    static const std::string fadd{"OpFAdd"};
+    static const std::string fmul{"OpFMul"};
 
     switch (bo) {
     case BO_IADD:   return iadd;
     case BO_IMUL:   return imul;
+    case BO_FADD:   return fadd;
+    case BO_FMUL:   return fmul;
     default:        assert(false && "Not implemented");
     }
 
     return iadd;  // return something to suppress compiler warning
 }
+
+const std::string& as_string(ForLoopDef::CmpOp cmp_op)
+{
+    static const std::string co_gt{"OpUGreaterThan"};
+    static const std::string co_ge{"OpUGreaterThanEqual"};
+    static const std::string co_lt{"OpULessThan"};
+
+    switch (cmp_op) {
+        case ForLoopDef::CO_GT:         return co_gt;
+        case ForLoopDef::CO_GE:         return co_ge;
+        case ForLoopDef::CO_LT:         return co_lt;
+        case ForLoopDef::CO_LE:
+        case ForLoopDef::CO_EQ:
+        case ForLoopDef::CO_NE:
+        case ForLoopDef::CO_UNKNOWN:
+        default:                        assert(false && "Not implement");
+    }
+
+    return co_gt; // Unreachable, return something to suppress compile warning
+}
+

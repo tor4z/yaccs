@@ -43,6 +43,8 @@ struct CodeGen
     void push_store(const StoreDef& sd);
     void push_access_chain(const AccessChainDef& acd);
     void push_snippet_invo_bound_check(const InvocationBoundCheckDef& def);
+    void push_snippet_begin_for(const ForLoopDef& for_def);
+    void push_snippet_end_for(const ForLoopDef& for_def);
 
     // for ext
     void push_ext_binary_opration(const ext::BinaryOpDef& bod);

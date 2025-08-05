@@ -72,9 +72,8 @@ private:
     void store_tensor_shape_element(id_t func_id, const TensorMeta& tm, uint32_t index, id_t object_id);
     void store_tensor_dims(id_t func_id, const TensorMeta& tm, id_t object_id);
 
-    void for_loop_init(ForLoopDef& def);
-    void for_loop_begin(const ForLoopDef& def);
-    void for_loop_end(const ForLoopDef& def);
+    void begin_for(ForLoopDef& def);
+    void end_for(ForLoopDef& def);
 
     template<typename T>
     id_t add_const(DType dtype, T value);

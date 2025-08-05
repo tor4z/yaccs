@@ -519,18 +519,39 @@ void Program::add_gemm(const OpGemm& gemm)
         const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
 
         auto A_shape0{access_tensor_shape_index(func_id, A, 0)};
+        auto A_shape1{access_tensor_shape_index(func_id, A, 0)};
+        auto B_shape0{access_tensor_shape_index(func_id, B, 0)};
         auto B_shape1{access_tensor_shape_index(func_id, B, 1)};
+        auto A_dims_id{access_tensor_dims(func_id, A)};
         store_tensor_shape_element(func_id, Y, 0, A_shape0);
         store_tensor_shape_element(func_id, Y, 1, B_shape1);
-        auto A_dims_id{access_tensor_dims(func_id, A)};
         store_tensor_dims(func_id, Y, A_dims_id);
 
-        // ForLoopDef for_def;
-        // for_def.i_boundary_id = access_tensor_shape_index(func_id, Y, 1);
-        // for_loop_init(for_def);
-        // for_loop_begin(for_def);
-        //     // loop block
-        // for_loop_end(for_def);
+        auto this_element_var{add_var(Y.dtype_id, SC_FUNCTION, add_const(Y.dtype, 0))};
+        auto shape_element_type_id{add_dtype(DT_UINT32)};
+        auto bo_mul{Y.dtype == DT_FLOAT ? BO_FMUL : BO_IMUL};
+        auto bo_add{Y.dtype == DT_FLOAT ? BO_FADD : BO_IADD};
+        auto invo_x{access_invocation_index(func_id, 0)};
+        auto invo_y{access_invocation_index(func_id, 1)};
+        auto A_row_begin{binary_op(BO_IMUL, func_id, shape_element_type_id, invo_x, A_shape1)};
+
+        ForLoopDef for_def{.i_boundary_id = A_shape1};
+        begin_for(for_def);
+            auto i_id{load_var(for_def.i_type_id, for_def.i_var_id)};
+            auto A_element_index{binary_op(BO_IADD, func_id, shape_element_type_id, A_row_begin, i_id)};
+            auto B_row_begin{binary_op(BO_IMUL, func_id, shape_element_type_id, i_id, B_shape1)};
+            auto B_element_index{binary_op(BO_IADD, func_id, shape_element_type_id, B_row_begin, invo_y)};
+            auto A_element{load_tensor_element(func_id, A, A_element_index)};
+            auto B_element{load_tensor_element(func_id, B, B_element_index)};
+            auto AB_mul{binary_op(bo_mul, func_id, Y.dtype_id, A_element, B_element)};
+            auto this_element_val{load_var(Y.dtype_id, this_element_var)};
+            auto this_element_accu{binary_op(bo_add, func_id, Y.dtype_id, AB_mul, this_element_val)};
+            store_var(this_element_var, this_element_accu);
+        end_for(for_def);
+
+        auto Y_shape1{access_tensor_shape_index(func_id, Y, 1)};
+        auto final_this_element_val{load_var(Y.dtype_id, this_element_var)};
+        store_tensor_element(func_id, Y, invo_x, Y_shape1, invo_y, final_this_element_val);
 
     add_function_epilogue();
     layers_.push_back(func_id);
@@ -719,7 +740,6 @@ id_t Program::access_tensor_shape_index(id_t func_id, const TensorMeta& tm, uint
     if (tm.storage_class == SC_UNIFORM) {
         access_indices = {0, 1, index};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
-        add_type_pointer(tm.shape_type_id, SC_FUNCTION);
         def.base_id = add_var(tm.shape_type_id, SC_FUNCTION, tm.shape_id);
         access_indices = {index};
     } else {
@@ -780,8 +800,7 @@ id_t Program::load_tensor_element(id_t func_id, const TensorMeta& tm, id_t index
     if (tm.storage_class == SC_UNIFORM) {
         access_index_ids = {tensor_index_id, data_index_id, index_id};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
-        add_type_pointer(tm.shape_type_id, SC_FUNCTION);
-        base_id = add_var(tm.shape_type_id, SC_FUNCTION, tm.data_id);
+        base_id = add_var(tm.data_type_id, SC_FUNCTION, tm.data_id);
         access_index_ids = {index_id};
     } else {
         access_index_ids = {data_index_id, index_id};
@@ -803,10 +822,20 @@ id_t Program::load_tensor_element(id_t func_id, const TensorMeta& tm, id_t i, id
 
 void Program::store_tensor_element(id_t func_id, const TensorMeta& tm, id_t index_id, id_t object_id)
 {
-    auto data_index{add_const(DT_UINT32, 2)};
+    auto data_index_id{add_const(DT_UINT32, 2)};
     auto tensor_dtype_id{add_dtype(tm.dtype)};
     auto tensor_dtype_ptr_id{add_type_pointer(tensor_dtype_id, tm.storage_class)};
-    auto ptr{access_chain(func_id, tensor_dtype_ptr_id, tm.id, {data_index, index_id})};
+    auto tensor_index_id{add_const(DT_UINT32, 0)}; // for uniform input
+
+    std::vector<id_t> access_index_ids{};
+    if (tm.storage_class == SC_UNIFORM) {
+        access_index_ids = {tensor_index_id, data_index_id, index_id};
+    } else {
+        access_index_ids = {data_index_id, index_id};
+    }
+
+
+    auto ptr{access_chain(func_id, tensor_dtype_ptr_id, tm.id, access_index_ids)};
     store_var(ptr, object_id);
 }
 
@@ -874,19 +903,28 @@ void Program::store_tensor_dims(id_t func_id, const TensorMeta& tm, id_t object_
     store_var(ptr, object_id);
 }
 
-void Program::for_loop_init(ForLoopDef& def)
-{
 
+void Program::begin_for(ForLoopDef& def)
+{
+    // init
+    def.init_label_id = alloc_id();
+    def.cond_label_id = alloc_id();
+    def.loop_exit_label_id = alloc_id();
+    def.loop_body_label_id = alloc_id();
+    def.i_inc_label_id = alloc_id();
+    def.cmp_id = alloc_id();
+    def.inc_amount_id = add_const(DT_UINT32, 1);
+    def.bool_type_id = add_dtype(DT_BOOL);
+    def.i_type_id = add_dtype(DT_UINT32);
+    def.i_type_ptr_id = add_type_pointer(def.i_type_id, SC_FUNCTION);
+    def.i_var_id = add_var(def.i_type_id, SC_FUNCTION, add_const(DT_UINT32, 0));
+    def.cmp_op = ForLoopDef::CO_LT;
+    code_gen_.push_snippet_begin_for(def);
 }
 
-void Program::for_loop_begin(const ForLoopDef& def)
+void Program::end_for(ForLoopDef& def)
 {
-
-}
-
-void Program::for_loop_end(const ForLoopDef& def)
-{
-
+    code_gen_.push_snippet_end_for(def);
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

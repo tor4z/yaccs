@@ -81,6 +81,38 @@ void CodeGen::push_snippet_invo_bound_check(const InvocationBoundCheckDef& def)
     this_fn_.body_ss << "\t%" << def.label_id_next << " = OpLabel\n";
 }
 
+void CodeGen::push_snippet_begin_for(const ForLoopDef& for_def)
+{
+    auto i_id{alloc_id()};
+
+    this_fn_.body_ss << "\t\tOpBranch %" << for_def.init_label_id << "\n";
+    this_fn_.body_ss << "\t%" << for_def.init_label_id << " = OpLabel\n";
+    this_fn_.body_ss << "\t\tOpLoopMerge %" << for_def.loop_exit_label_id << " %" << for_def.i_inc_label_id << " None\n";
+    this_fn_.body_ss << "\t\tOpBranch %" << for_def.cond_label_id << "\n";
+    // cmp
+    this_fn_.body_ss << "\t%" << for_def.cond_label_id << " = OpLabel\n";
+    this_fn_.body_ss << "\t%" << i_id << " = OpLoad %" << for_def.i_type_id << " %" << for_def.i_var_id << "\n";
+    this_fn_.body_ss << "\t%" << for_def.cmp_id << " = " << as_string(for_def.cmp_op)
+        << " %" << for_def.bool_type_id << " %" << i_id << " %" << for_def.i_boundary_id << "\n";
+    this_fn_.body_ss << "\t\tOpBranchConditional %" << for_def.cmp_id << " %" << for_def.loop_body_label_id << " %" << for_def.loop_exit_label_id << "\n";
+    this_fn_.body_ss << "\t%" << for_def.loop_body_label_id << " = OpLabel\n";
+}
+
+
+void CodeGen::push_snippet_end_for(const ForLoopDef& for_def)
+{
+    auto i_id{alloc_id()};
+    auto i_inc_id{alloc_id()};
+
+    this_fn_.body_ss << "\t\tOpBranch %" << for_def.i_inc_label_id << "\n";
+    this_fn_.body_ss << "\t%" << for_def.i_inc_label_id << " = OpLabel\n";
+    this_fn_.body_ss << "\t%" << i_id << " = OpLoad %" << for_def.i_type_id << " %" << for_def.i_var_id << "\n";
+    this_fn_.body_ss << "\t%" << i_inc_id << " = OpIAdd %" << for_def.i_type_id << " %" << i_id << " %" << for_def.inc_amount_id << "\n";
+    this_fn_.body_ss << "\t\tOpStore %" << for_def.i_var_id << " %" << i_inc_id << "\n";
+    this_fn_.body_ss << "\t\tOpBranch %" << for_def.init_label_id <<"\n";
+    this_fn_.body_ss << "\t%" << for_def.loop_exit_label_id << " = OpLabel\n";
+}
+
 void CodeGen::FnCodeGen::clear()
 {
     prologue_ss.str("");

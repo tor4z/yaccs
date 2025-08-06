@@ -524,7 +524,7 @@ void Program::add_gemm(const OpGemm& gemm)
         const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
 
         auto A_shape0{access_tensor_shape_index(func_id, A, 0)};
-        auto A_shape1{access_tensor_shape_index(func_id, A, 0)};
+        auto A_shape1{access_tensor_shape_index(func_id, A, 1)};
         auto B_shape0{access_tensor_shape_index(func_id, B, 0)};
         auto B_shape1{access_tensor_shape_index(func_id, B, 1)};
         auto A_dims{access_tensor_dims(func_id, A)};

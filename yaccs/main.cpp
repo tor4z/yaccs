@@ -51,8 +51,6 @@ int main(int argc, char** argv)
         if (node.op_type().compare("Gemm") == 0) {
             OpGemm gemm;
             gemm_from_onnx(node, model.graph(), gemm);
-            std::cout << gemm.B << "\n";
-            std::cout << gemm.B.transpose() << "\n";
             program.add_gemm(gemm);
         } else if (node.op_type().compare("Relu") == 0) {
             OpRelu relu;

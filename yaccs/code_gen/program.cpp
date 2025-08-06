@@ -509,8 +509,13 @@ void Program::add_gemm(const OpGemm& gemm)
 
         const auto alpha{gemm.alpha};
         const auto beta{gemm.beta};
-        add_const_tensor(gemm.B);
-        add_const_tensor(gemm.C);
+        
+        Tensor B_alpha{gemm.B};
+        Tensor C_beta{gemm.C};
+        B_alpha.mul(gemm.alpha);
+        C_beta.mul(gemm.beta);
+        add_const_tensor(B_alpha);
+        add_const_tensor(C_beta);
         add_shared_tensor(gemm.Y);
 
         const auto& A{global_tensors_.at(gemm.A.tt.name)};

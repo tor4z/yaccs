@@ -3,6 +3,8 @@
 
 #include "yaccs/dtype.hpp"
 #include <cassert>
+#include <cstdint>
+#include <endian.h>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -12,6 +14,8 @@
 
 struct TensorType
 {
+    TensorType();
+
     int shape[MAX_TENSOR_DIMS];
     std::string name;
     DType dtype;
@@ -25,13 +29,21 @@ struct Tensor
     std::vector<char> data;
 
     Tensor transpose() const;
+    void mul(float x);
     template<DType DT>
-    auto& mut_raw(int i);
+    void set(int i, float x);
     template<DType DT>
     auto at(int i) const;
     template<DType DT>
     auto at(int i0, int i1) const;
 }; // struct Tensor
+
+template<>
+inline void Tensor::set<DT_FLOAT>(int i, float x)
+{
+    uint32_t v{*reinterpret_cast<uint32_t*>(&x)};
+    *reinterpret_cast<uint32_t*>(data.data() + i * DT_FLOAT_BYTES) = htole32(v);
+}
 
 template<>
 inline auto Tensor::at<DT_FLOAT>(int i) const

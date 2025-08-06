@@ -98,6 +98,16 @@ enum BinaryOperator
     BO_FADD,
 }; // enum BinaryOperator
 
+enum CmpOp {
+    CO_UNKNOWN = 0,
+    CO_GT,
+    CO_GE,
+    CO_LT,
+    CO_LE,
+    CO_EQ,
+    CO_NE,
+}; // enum CmpOp
+
 struct TensorMeta
 {
     std::string name;
@@ -308,16 +318,6 @@ struct BinaryOpDef
 
 struct ForLoopDef
 {
-    enum CmpOp {
-        CO_UNKNOWN = 0,
-        CO_GT,
-        CO_GE,
-        CO_LT,
-        CO_LE,
-        CO_EQ,
-        CO_NE,
-    }; // enum CmpOp
-
     id_t i_var_id;
     id_t i_type_ptr_id;
     id_t i_boundary_id;
@@ -334,5 +334,16 @@ struct ForLoopDef
     id_t cmp_id;
     CmpOp cmp_op;
 }; // struct ForLoopDef
+
+
+struct IfDef
+{
+    id_t cmp_op1_id;
+    id_t cmp_op2_id;
+    id_t bool_type_id;
+    id_t body_label_id;
+    id_t next_label_id;
+    CmpOp cmp_op;
+}; // IfDef
 
 #endif // YACCS_DEF_H_

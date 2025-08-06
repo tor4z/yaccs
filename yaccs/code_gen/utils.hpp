@@ -60,6 +60,6 @@ const std::string& as_string(StorageClass sc);
 const std::string& as_string(Decoration deco);
 const std::string& as_string(BuiltIn built_in);
 const std::string& as_string(BinaryOperator bo);
-const std::string& as_string(ForLoopDef::CmpOp cmp_op);
+const std::string& as_string(CmpOp cmp_op);
 
 #endif // YACCS_CODE_GEN_UTILS_H_

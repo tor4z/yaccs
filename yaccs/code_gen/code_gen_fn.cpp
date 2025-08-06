@@ -69,16 +69,21 @@ void CodeGen::push_access_chain(const AccessChainDef& acd)
     this_fn_.body_ss << "\n";
 }
 
-void CodeGen::push_snippet_invo_bound_check(const InvocationBoundCheckDef& def)
+void CodeGen::push_snippet_begin_if(const IfDef& def)
 {
-    this_fn_.body_ss << "\t%" << def.condition_id << " = OpUGreaterThan %" << def.bool_type_id
-        << " %" << def.invo_comp_id << " %" << def.tensor_shape_comp_id << "\n";
-    this_fn_.body_ss << "\t\tOpSelectionMerge %" << def.label_id_next << " None\n";
-    this_fn_.body_ss << "\t\tOpBranchConditional %" << def.condition_id << " %"
-        << def.label_id_ret << " %" << def.label_id_next << "\n";
-    this_fn_.body_ss << "\t%" << def.label_id_ret << " = OpLabel\n";
-    this_fn_.body_ss << "\t\tOpReturn\n";
-    this_fn_.body_ss << "\t%" << def.label_id_next << " = OpLabel\n";
+    auto condition_id{alloc_id()};
+
+    this_fn_.body_ss << "\t%" << condition_id << " = OpUGreaterThan %" << def.bool_type_id
+        << " %" << def.cmp_op1_id << " %" << def.cmp_op2_id << "\n";
+    this_fn_.body_ss << "\t\tOpSelectionMerge %" << def.next_label_id << " None\n";
+    this_fn_.body_ss << "\t\tOpBranchConditional %" << condition_id << " %"
+        << def.body_label_id << " %" << def.next_label_id << "\n";
+    this_fn_.body_ss << "\t%" << def.body_label_id << " = OpLabel\n";
+}
+
+void CodeGen::push_snippet_end_if(const IfDef& def)
+{
+    this_fn_.body_ss << "\t%" << def.next_label_id << " = OpLabel\n";
 }
 
 void CodeGen::push_snippet_begin_for(const ForLoopDef& for_def)

@@ -74,6 +74,9 @@ private:
 
     void begin_for(ForLoopDef& def);
     void end_for(ForLoopDef& def);
+    void begin_if(IfDef& def, id_t op1_id, CmpOp cmp_op, id_t op2_id);
+    void end_if(IfDef& def);
+    void add_return();
 
     template<typename T>
     id_t add_const(DType dtype, T value);

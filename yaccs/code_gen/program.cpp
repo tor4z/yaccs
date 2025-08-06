@@ -518,6 +518,9 @@ void Program::add_gemm(const OpGemm& gemm)
         const auto& C{global_tensors_.at(gemm.C.tt.name)};
         const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
 
+        invocation_boundary_check(func_id, Y, 0);
+        invocation_boundary_check(func_id, Y, 1);
+
         auto A_shape0{access_tensor_shape_index(func_id, A, 0)};
         auto A_shape1{access_tensor_shape_index(func_id, A, 0)};
         auto B_shape0{access_tensor_shape_index(func_id, B, 0)};
@@ -783,14 +786,13 @@ id_t Program::access_invocation_index(id_t func_id, uint32_t index)
 
 void Program::invocation_boundary_check(id_t func_id, const TensorMeta& tm, uint32_t index)
 {
-    InvocationBoundCheckDef def;
-    def.label_id_ret = alloc_id();
-    def.label_id_next = alloc_id();
-    def.bool_type_id = add_dtype(DT_BOOL);
-    def.condition_id = alloc_id();
-    def.invo_comp_id = access_invocation_index(func_id, index);
-    def.tensor_shape_comp_id = access_tensor_shape_index(func_id, tm, index);
-    code_gen_.push_snippet_invo_bound_check(def);
+    IfDef if_def;
+    auto cmp_op1_id{access_invocation_index(func_id, index)};
+    auto cmp_op2_id{access_tensor_shape_index(func_id, tm, index)};
+
+    begin_if(if_def, cmp_op1_id, CO_GT, cmp_op2_id);
+        add_return();
+    end_if(if_def);
 }
 
 id_t Program::load_tensor_element(id_t func_id, const TensorMeta& tm, id_t index_id)
@@ -921,13 +923,35 @@ void Program::begin_for(ForLoopDef& def)
     def.i_type_id = add_dtype(DT_UINT32);
     def.i_type_ptr_id = add_type_pointer(def.i_type_id, SC_FUNCTION);
     def.i_var_id = add_var(def.i_type_id, SC_FUNCTION, add_const(DT_UINT32, 0));
-    def.cmp_op = ForLoopDef::CO_LT;
+    def.cmp_op = CO_LT;
     code_gen_.push_snippet_begin_for(def);
 }
 
 void Program::end_for(ForLoopDef& def)
 {
     code_gen_.push_snippet_end_for(def);
+}
+
+void Program::begin_if(IfDef& def, id_t op1_id, CmpOp cmp_op, id_t op2_id)
+{
+    def.cmp_op1_id = op1_id;
+    def.cmp_op2_id = op2_id;
+    def.cmp_op = cmp_op;
+    def.bool_type_id = add_dtype(DT_BOOL);
+    def.body_label_id = alloc_id();
+    def.next_label_id = alloc_id();
+
+    code_gen_.push_snippet_begin_if(def);
+}
+
+void Program::end_if(IfDef& def)
+{
+    code_gen_.push_snippet_end_if(def);
+}
+
+void Program::add_return()
+{
+    code_gen_.push_return();
 }
 
 FunctionHeaderDef& Program::find_function_def(id_t id)

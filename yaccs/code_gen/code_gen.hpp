@@ -42,7 +42,8 @@ struct CodeGen
     void push_load(const LoadDef& ld);
     void push_store(const StoreDef& sd);
     void push_access_chain(const AccessChainDef& acd);
-    void push_snippet_invo_bound_check(const InvocationBoundCheckDef& def);
+    void push_snippet_begin_if(const IfDef& def);
+    void push_snippet_end_if(const IfDef& def);
     void push_snippet_begin_for(const ForLoopDef& for_def);
     void push_snippet_end_for(const ForLoopDef& for_def);
 

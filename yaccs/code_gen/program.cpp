@@ -523,17 +523,14 @@ void Program::add_gemm(const OpGemm& gemm)
         const auto& C{global_tensors_.at(gemm.C.tt.name)};
         const auto& Y{global_tensors_.at(gemm.Y.tt.name)};
 
-        invocation_boundary_check(func_id, Y, 0);
-        invocation_boundary_check(func_id, Y, 1);
-
         auto A_shape0{access_tensor_shape_index(func_id, A, 0)};
         auto A_shape1{access_tensor_shape_index(func_id, A, 0)};
         auto B_shape0{access_tensor_shape_index(func_id, B, 0)};
         auto B_shape1{access_tensor_shape_index(func_id, B, 1)};
-        auto A_dims_id{access_tensor_dims(func_id, A)};
-        store_tensor_shape_element(func_id, Y, 0, A_shape0);
+        auto A_dims{access_tensor_dims(func_id, A)};
+        store_tensor_shape_element(func_id, Y, 0, gemm.trans_a ? A_shape1 : A_shape0);
         store_tensor_shape_element(func_id, Y, 1, B_shape1);
-        store_tensor_dims(func_id, Y, A_dims_id);
+        store_tensor_dims(func_id, Y, A_dims);
 
         auto this_element_var{add_var(Y.dtype_id, SC_FUNCTION, add_const(Y.dtype, 0))};
         auto shape_element_type_id{add_dtype(DT_UINT32)};
@@ -541,12 +538,22 @@ void Program::add_gemm(const OpGemm& gemm)
         auto bo_add{Y.dtype == DT_FLOAT ? BO_FADD : BO_IADD};
         auto invo_x{access_invocation_index(func_id, 0)};
         auto invo_y{access_invocation_index(func_id, 1)};
-        auto A_row_begin{binary_op(BO_IMUL, func_id, shape_element_type_id, invo_x, A_shape1)};
-
-        ForLoopDef for_def{.i_boundary_id = A_shape1};
+        
+        invocation_boundary_check(func_id, Y, 0);
+        invocation_boundary_check(func_id, Y, 1);
+        
+        ForLoopDef for_def{.i_boundary_id = gemm.trans_a ? A_shape0 : A_shape1};
         begin_for(for_def);
             auto i_id{load_var(for_def.i_type_id, for_def.i_var_id)};
-            auto A_element_index{binary_op(BO_IADD, func_id, shape_element_type_id, A_row_begin, i_id)};
+            id_t A_row_begin{};
+            id_t A_element_index{};
+            if (gemm.trans_a) {
+                A_row_begin = binary_op(BO_IMUL, func_id, shape_element_type_id, invo_y, A_shape0);
+                A_element_index = binary_op(BO_IADD, func_id, shape_element_type_id, A_row_begin, i_id);
+            } else {
+                A_row_begin = binary_op(BO_IMUL, func_id, shape_element_type_id, invo_x, A_shape1);
+                A_element_index = binary_op(BO_IADD, func_id, shape_element_type_id, A_row_begin, i_id);
+            }
             auto B_row_begin{binary_op(BO_IMUL, func_id, shape_element_type_id, i_id, B_shape1)};
             auto B_element_index{binary_op(BO_IADD, func_id, shape_element_type_id, B_row_begin, invo_y)};
             auto A_element{load_tensor_element(func_id, A, A_element_index)};
@@ -555,7 +562,6 @@ void Program::add_gemm(const OpGemm& gemm)
             auto this_element_val{load_var(Y.dtype_id, this_element_var)};
             auto this_element_accu{binary_op(bo_add, func_id, Y.dtype_id, AB_mul, this_element_val)};
             store_var(this_element_var, this_element_accu);
-            /// TODO: check for matrix transpose
         end_for(for_def);
 
         auto Y_shape1{access_tensor_shape_index(func_id, Y, 1)};

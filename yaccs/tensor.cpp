@@ -13,6 +13,16 @@ TensorType::TensorType()
     memset(shape, 0, MAX_TENSOR_DIMS * sizeof(shape[0]));
 }
 
+int TensorType::transpose_idx(int i) const
+{
+    if (!row_major && dims > 1) {
+        int c{i / shape[1]};
+        int r{i % shape[1]};
+        i = r * shape[0] + c;
+    }
+    return i;
+}
+
 Tensor Tensor::transpose() const
 {
     assert(tt.dims > 1 && "Bad transpose operation");
@@ -42,7 +52,8 @@ void Tensor::mul(float x)
             set<DT_FLOAT>(i, v * x);            
         }
         break;
-    default:            assert(false && "Not implement");
+    default:
+        assert(false && "Not implement");
     }
 }
 
@@ -70,7 +81,7 @@ std::ostream& operator<<(std::ostream& os, const Tensor& tensor)
         for (int i = 0; i < num_elems; ++i) {
             os << std::setw(8) << std::fixed << std::setprecision(5)
                 << tensor.at<DT_FLOAT>(i) << ", ";
-            if (i % std::max(1, tensor.tt.shape[1]) == 0) os << "\n";
+            if ((i + 1) % std::max(1, tensor.tt.shape[1]) == 0) os << "\n";
         }
         break;
     default:

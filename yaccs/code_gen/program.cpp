@@ -510,7 +510,7 @@ void Program::add_gemm(const OpGemm& gemm)
         const auto alpha{gemm.alpha};
         const auto beta{gemm.beta};
         
-        Tensor B_alpha{gemm.B};
+        Tensor B_alpha{gemm.trans_b ? gemm.B.transpose() : gemm.B};
         Tensor C_beta{gemm.C};
         B_alpha.mul(gemm.alpha);
         C_beta.mul(gemm.beta);
@@ -556,12 +556,12 @@ void Program::add_gemm(const OpGemm& gemm)
             auto this_element_accu{binary_op(bo_add, func_id, Y.dtype_id, AB_mul, this_element_val)};
             store_var(this_element_var, this_element_accu);
             /// TODO: check for matrix transpose
-            /// TODO: check alpha, beta value
-            /// TODO: add with bias
         end_for(for_def);
 
         auto Y_shape1{access_tensor_shape_index(func_id, Y, 1)};
-        auto final_this_element_val{load_var(Y.dtype_id, this_element_var)};
+        auto AB_element_val{load_var(Y.dtype_id, this_element_var)};
+        auto C_element_id{load_tensor_element(func_id, C, invo_x)};
+        auto final_this_element_val{binary_op(bo_add, func_id, Y.dtype_id, AB_element_val, C_element_id)};
         store_tensor_element(func_id, Y, invo_x, Y_shape1, invo_y, final_this_element_val);
 
     add_function_epilogue();

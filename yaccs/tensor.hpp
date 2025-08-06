@@ -15,6 +15,7 @@
 struct TensorType
 {
     TensorType();
+    int transpose_idx(int i) const;
 
     int shape[MAX_TENSOR_DIMS];
     std::string name;
@@ -42,13 +43,13 @@ template<>
 inline void Tensor::set<DT_FLOAT>(int i, float x)
 {
     uint32_t v{*reinterpret_cast<uint32_t*>(&x)};
-    *reinterpret_cast<uint32_t*>(data.data() + i * DT_FLOAT_BYTES) = htole32(v);
+    *reinterpret_cast<uint32_t*>(data.data() + tt.transpose_idx(i) * DT_FLOAT_BYTES) = htole32(v);
 }
 
 template<>
 inline auto Tensor::at<DT_FLOAT>(int i) const
 {
-    auto raw{le32toh(*reinterpret_cast<const uint32_t*>(data.data() + i * DT_FLOAT_BYTES))};
+    auto raw{le32toh(*reinterpret_cast<const uint32_t*>(data.data() + tt.transpose_idx(i) * DT_FLOAT_BYTES))};
     float v{*reinterpret_cast<float*>(&raw)};
     return v;
 }

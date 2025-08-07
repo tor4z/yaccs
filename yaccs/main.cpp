@@ -13,11 +13,12 @@
 
 int main(int argc, char** argv)
 {
+    std::string filename{"../examples/01/model.onnx"};
+
     onnx::ModelProto model;
-    std::ifstream ifs{"../examples/01/model.onnx", std::ios::in};
+    std::ifstream ifs{filename, std::ios::in};
     model.ParseFromIstream(&ifs);
     ifs.close();
-
 
     std::unordered_map<std::string, int> input_dynamic_axes {
         {"batch_size", 1}
@@ -27,7 +28,7 @@ int main(int argc, char** argv)
     };
 
     Program program;
-    program.set_name("a.spvasm");
+    program.set_name(extract_filename(filename) + ".spvasm");
 
     for (const auto& it : model.graph().input()) {
         if (it.type().has_tensor_type()) {
@@ -51,9 +52,6 @@ int main(int argc, char** argv)
         if (node.op_type().compare("Gemm") == 0) {
             OpGemm gemm;
             gemm_from_onnx(node, model.graph(), gemm);
-            std::cout << gemm.B << "\n";
-            std::cout << gemm.B.transpose() << "\n";
-            std::cout << "===\n";
             program.add_gemm(gemm);
         } else if (node.op_type().compare("Relu") == 0) {
             OpRelu relu;

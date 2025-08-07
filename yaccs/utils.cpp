@@ -110,3 +110,23 @@ void relu_from_onnx(const onnx::NodeProto& node, OpRelu& relu)
     relu.X.tt.name = node.input().at(0);
     relu.Y.tt.name = node.output().at(0);
 }
+
+std::string extract_filename(const std::string& path)
+{
+    auto last_slash_pos{path.rfind("/")};
+
+    if (last_slash_pos == path.back()) {
+        last_slash_pos = 0;
+    } else {
+        ++last_slash_pos;
+    }
+
+    auto filename_ext{path.substr(last_slash_pos, path.back())};
+    auto last_dot_pos{filename_ext.rfind(".")};
+
+    if (last_dot_pos == path.back()) {
+        return filename_ext;
+    } else {
+        return filename_ext.substr(0, last_dot_pos);
+    }
+}

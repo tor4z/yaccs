@@ -1,11 +1,50 @@
 #include "yaccs/utils.hpp"
 #include "yaccs/dtype.hpp"
+#include "yaccs/tensor.hpp"
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+#include <iostream>
+#include <string>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <unordered_map>
+#include <utility>
+#include <mutex>
+
+class TensorTypeMapper
+{
+    DEF_SINGLETON(TensorTypeMapper)
+public:
+    const TensorType* find(const std::string& name) const;
+    bool insert(const TensorType& tt);
+private:
+    TensorTypeMapper() {}
+    std::unordered_map<std::string, TensorType> data_;
+}; // class TensorTypeMapper
+
+const TensorType* TensorTypeMapper::find(const std::string& name) const
+{
+    auto find{data_.find(name)};
+    if (find == data_.end()) {
+        std::cerr << "Failed to find tensor " << name << "\n";
+        return nullptr;
+    }
+    return &find->second;
+}
+
+bool TensorTypeMapper::insert(const TensorType& tt)
+{
+    auto find{data_.find(tt.name)};
+    if (find != data_.end()) {
+        // std::cerr << "Duplicated tensor detected: " << tt.name << "\n";
+        return false;
+    }
+
+    data_.insert(std::make_pair(tt.name, tt));
+    return true;
+}
 
 std::string as_identifier(const std::string& name)
 {
@@ -34,6 +73,7 @@ void tensor_type_from_onnx(const onnx::TypeProto_Tensor& onnx_tensor, TensorType
             tensor_type.shape[i] = dim.dim_value();
         }
     }
+    TensorTypeMapper::instance()->insert(tensor_type);
 }
 
 void tensor_from_onnx(const onnx::TensorProto& pb_tensor, Tensor* tensor)
@@ -45,6 +85,7 @@ void tensor_from_onnx(const onnx::TensorProto& pb_tensor, Tensor* tensor)
     for (int i = 0; i < tensor->tt.dims; ++i) {
         tensor->tt.shape[i] = pb_tensor.dims().at(i);
     }
+    TensorTypeMapper::instance()->insert(tensor->tt);
     tensor->data.resize(pb_tensor.raw_data().size());
     memcpy(tensor->data.data(), pb_tensor.raw_data().data(), tensor->data.size());
 }
@@ -100,6 +141,7 @@ void gemm_from_onnx(const onnx::NodeProto& node, const onnx::GraphProto& graph, 
     } else {
         gemm.Y.tt.shape[1] = gemm.B.tt.shape[0];
     }
+    TensorTypeMapper::instance()->insert(gemm.Y.tt);
 }
 
 void relu_from_onnx(const onnx::NodeProto& node, OpRelu& relu)
@@ -108,10 +150,18 @@ void relu_from_onnx(const onnx::NodeProto& node, OpRelu& relu)
     assert(node.input().size() == 1 && "Bad num of input for Relu");
     assert(node.output().size() == 1 && "Bad num of output for Relu");
 
+    auto tensor_mapper{TensorTypeMapper::instance()};
     relu.name = node.name();
     relu.op_type = node.op_type();
-    relu.X.tt.name = node.input().at(0);
+    auto x_def{tensor_mapper->find(node.input().at(0))};
+    if (x_def == nullptr) {
+        assert(false && "Bad logic. Ancestor not found.");
+    }
+
+    relu.X.tt = *x_def;
+    relu.Y.tt = relu.X.tt;
     relu.Y.tt.name = node.output().at(0);
+    tensor_mapper->insert(relu.Y.tt);
 }
 
 std::string extract_filename(const std::string& path)
@@ -139,7 +189,7 @@ bool invoke_spirv_as(const std::string& spvasm, const std::string& out_file)
     auto child_pid{fork()};
     if (child_pid == 0) {
         // child process
-        execlp("spirv-as", "spirv-as", "-o", out_file.c_str(), spvasm.c_str(), NULL);
+        execlp("spirv-as", "spirv-as", spvasm.c_str(), "--target-env", "vulkan1.4", "-o", out_file.c_str(), NULL);
     } else {
         // parent process
         int status{0};

@@ -13,7 +13,61 @@ TensorType::TensorType()
     memset(shape, 0, MAX_TENSOR_DIMS * sizeof(shape[0]));
 }
 
-int TensorType::transpose_idx(int i) const
+TensorType::TensorType(const TensorType& tt)
+{
+    memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    name = tt.name;
+    dtype = tt.dtype;
+    dims = tt.dims;
+    row_major = tt.row_major;
+}
+
+TensorType::TensorType(TensorType&& tt)
+{
+    // copy
+    memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    name = tt.name;
+    dtype = tt.dtype;
+    dims = tt.dims;
+    row_major = tt.row_major;
+    // clear
+    memset(tt.shape, 0, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    tt.name = "";
+    tt.dtype = DT_UNDEFINED;
+    tt.dims = 0;
+    tt.row_major = false;
+}
+
+TensorType& TensorType::operator=(const TensorType& tt)
+{
+    memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    name = tt.name;
+    dtype = tt.dtype;
+    dims = tt.dims;
+    row_major = tt.row_major;
+    return *this;
+}
+
+TensorType& TensorType::operator=(TensorType&& tt)
+{
+    if (&tt != this) {
+        // copy
+        memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+        name = tt.name;
+        dtype = tt.dtype;
+        dims = tt.dims;
+        row_major = tt.row_major;
+        // clear
+        memset(tt.shape, 0, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+        tt.name = "";
+        tt.dtype = DT_UNDEFINED;
+        tt.dims = 0;
+        tt.row_major = false;
+    }
+    return *this;
+}
+
+int TensorType::transposed_idx(int i) const
 {
     if (!row_major && dims > 1) {
         int c{i / shape[1]};

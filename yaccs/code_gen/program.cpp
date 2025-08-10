@@ -28,15 +28,14 @@ void Program::set_name(const std::string& name)
 
 void Program::set_main()
 {
+    push_entry_listed_id(global_invocation_id());
+
     EntryDef ed;
     ed.local_size_x = 4;
     ed.local_size_y = 4;
     ed.local_size_z = 1;
+    ed.input_ids = entry_listed_ids_;
     ed.main_id = add_function_prologue(add_void_type());
-
-        auto invo_id{global_invocation_id()};
-        ed.input_ids.push_back(invo_id);
-
         Scope exe_scope{SCOPE_WORKGROUP};
         Scope mem_scope{SCOPE_WORKGROUP};
         MemSemantic mem_semantics{MS_WORKGROUP_MEMORY | MS_ACQUIRE_RELEASE};
@@ -57,13 +56,13 @@ void Program::add_input(const TensorType& tensor_type)
 {
     DecorateSetBindingDef binding_deco;
     DecorateStructDef struct_deco;
-    auto storage_class{SC_UNIFORM};
+    auto storage_class{SC_STORAGE_BUFFER};
 
     auto type_id{add_tensor_type(tensor_type, storage_class, false)};
     auto input_tensor_type{add_struct_dtype({type_id}, false)};
     auto var_id{add_var(input_tensor_type, storage_class)};
 
-    struct_deco.deco = DECO_BUFFER_BLOCK;
+    struct_deco.deco = DECO_BLOCK;
     struct_deco.struct_type_id = input_tensor_type;
     struct_deco.member_deco.push_back(DecorateStructDef::FieldOffset{.field = 0, .offset = 0});
     code_gen_.push_struct_decorate(struct_deco);
@@ -81,19 +80,20 @@ void Program::add_input(const TensorType& tensor_type)
     tm.dtype_id = add_dtype(tensor_type.dtype);
     tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_class);
     global_tensors_.insert(std::make_pair(tensor_type.name, tm));
+    push_entry_listed_id(var_id);
 }
 
 void Program::add_output(const TensorType& tensor_type)
 {
     DecorateSetBindingDef binding_deco;
     DecorateStructDef struct_deco;
-    auto storage_class{SC_UNIFORM};
+    auto storage_class{SC_STORAGE_BUFFER};
 
     auto type_id{add_tensor_type(tensor_type, storage_class, false)};
     auto output_tensor_type{add_struct_dtype({type_id}, false)};
     auto var_id{add_var(output_tensor_type, storage_class)};
 
-    struct_deco.deco = DECO_BUFFER_BLOCK;
+    struct_deco.deco = DECO_BLOCK;
     struct_deco.struct_type_id = output_tensor_type;
     struct_deco.member_deco.push_back(DecorateStructDef::FieldOffset{.field = 0, .offset = 0});
     code_gen_.push_struct_decorate(struct_deco);
@@ -111,6 +111,7 @@ void Program::add_output(const TensorType& tensor_type)
     tm.dtype_id = add_dtype(tensor_type.dtype);
     tm.dtype_pointer_id = add_type_pointer(tm.dtype_id, storage_class);
     global_tensors_.insert(std::make_pair(tensor_type.name, tm));
+    push_entry_listed_id(var_id);
 }
 
 void Program::dump_ir()
@@ -408,6 +409,7 @@ id_t Program::add_shared_tensor(const Tensor& tensor)
     tm.storage_class = storage_class;
     tm.dtype_id = add_dtype(tensor.tt.dtype);
     global_tensors_.insert(std::make_pair(tensor.tt.name, tm));
+    push_entry_listed_id(vd.id);
 
     return vd.id;
 }
@@ -588,22 +590,24 @@ void Program::add_relu(const OpRelu& relu)
         add_shared_tensor(tensor_Y);
         const auto& Y{global_tensors_.at(relu.Y.tt.name)};
 
+        // Setup output tensor dims and shape
+        auto X_shape0{access_tensor_shape_index(func_id, X, 0)};
+        auto X_shape1{access_tensor_shape_index(func_id, X, 1)};
+        auto X_dims_id{access_tensor_dims(func_id, X)};
+        store_tensor_dims(func_id, Y, X_dims_id);
+        store_tensor_shape_element(func_id, Y, 0, X_shape0);
+        store_tensor_shape_element(func_id, Y, 1, X_shape1);
+
+        // boundary check
         invocation_boundary_check(func_id, Y, 0);
         invocation_boundary_check(func_id, Y, 1);
 
+        // relu operator eval
         auto invo_x{access_invocation_index(func_id, 0)};
         auto invo_y{access_invocation_index(func_id, 1)};
-        auto X_shape0{access_tensor_shape_index(func_id, X, 0)};
-        auto X_shape1{access_tensor_shape_index(func_id, X, 1)};
         auto x{load_tensor_element(func_id, X, invo_x, X_shape1, invo_y)};
         auto relu_result{std_450_.max(X.dtype, func_id, add_const(X.dtype, 0), x)};
         store_tensor_element(func_id, Y, invo_x, X_shape1, invo_y, relu_result);
-
-        /// TODO: run only once
-        store_tensor_shape_element(func_id, Y, 0, X_shape0);
-        store_tensor_shape_element(func_id, Y, 1, X_shape1);
-        auto X_dims_id{access_tensor_dims(func_id, X)};
-        store_tensor_dims(func_id, Y, X_dims_id);
 
     add_function_epilogue();
     layers_.push_back(func_id);
@@ -725,6 +729,8 @@ id_t Program::access_tensor_dims(id_t func_id, const TensorMeta& tm)
     std::vector<uint32_t> access_indices{};
     if (tm.storage_class == SC_UNIFORM) {
         access_indices = {0, 0};
+    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
+        access_indices = {0, 0};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
         return tm.dims_id;
     } else {
@@ -755,6 +761,8 @@ id_t Program::access_tensor_shape_index(id_t func_id, const TensorMeta& tm, uint
 
     std::vector<uint32_t> access_indices{};
     if (tm.storage_class == SC_UNIFORM) {
+        access_indices = {0, 1, index};
+    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
         access_indices = {0, 1, index};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
         def.base_id = add_var(tm.shape_type_id, SC_FUNCTION, tm.shape_id);
@@ -815,6 +823,8 @@ id_t Program::load_tensor_element(id_t func_id, const TensorMeta& tm, id_t index
     id_t base_id{tm.id};
     if (tm.storage_class == SC_UNIFORM) {
         access_index_ids = {tensor_index_id, data_index_id, index_id};
+    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
+        access_index_ids = {tensor_index_id, data_index_id, index_id};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
         base_id = add_var(tm.data_type_id, SC_FUNCTION, tm.data_id);
         access_index_ids = {index_id};
@@ -845,6 +855,8 @@ void Program::store_tensor_element(id_t func_id, const TensorMeta& tm, id_t inde
 
     std::vector<id_t> access_index_ids{};
     if (tm.storage_class == SC_UNIFORM) {
+        access_index_ids = {tensor_index_id, data_index_id, index_id};
+    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
         access_index_ids = {tensor_index_id, data_index_id, index_id};
     } else {
         access_index_ids = {data_index_id, index_id};
@@ -893,7 +905,7 @@ void Program::store_tensor_shape_element(id_t func_id, const TensorMeta& tm, uin
     auto shape_type_ptr_id{add_type_pointer(shape_type_id, tm.storage_class)};
 
     std::vector<id_t> access_index_ids{};
-    if (tm.storage_class == SC_UNIFORM) {
+    if (tm.storage_class == SC_UNIFORM || tm.storage_class == SC_STORAGE_BUFFER) {
         auto tensor_index_id{add_const(DT_UINT32, 0)}; // for uniform input
         access_index_ids = {tensor_index_id, shape_base_index_id, shape_index_id};
     } else {
@@ -907,7 +919,7 @@ void Program::store_tensor_shape_element(id_t func_id, const TensorMeta& tm, uin
 void Program::store_tensor_dims(id_t func_id, const TensorMeta& tm, id_t object_id)
 {
     std::vector<uint32_t> access_indices{};
-    if (tm.storage_class == SC_UNIFORM) {
+    if (tm.storage_class == SC_UNIFORM || tm.storage_class == SC_STORAGE_BUFFER) {
         access_indices = {0, 0};
     } else {
         access_indices = {0};
@@ -968,4 +980,14 @@ void Program::add_return()
 FunctionHeaderDef& Program::find_function_def(id_t id)
 {
     return global_funcs_.at(id);
+}
+
+void Program::push_entry_listed_id(id_t id)
+{
+    for (auto it : entry_listed_ids_) {
+        if (it == id) {
+            return;
+        }
+    }
+    entry_listed_ids_.push_back(id);
 }

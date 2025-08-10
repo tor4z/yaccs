@@ -24,7 +24,7 @@ const std::string& as_string(StorageClass sc)
     static const std::string push_constant{"PushConstant"};
     static const std::string atomiccounter{"AtomicCounter"};
     static const std::string image{"Image"};
-    static const std::string storage_buffer{"Storage_Buffer"};
+    static const std::string storage_buffer{"StorageBuffer"};
     static const std::string tile_image_ext{"TileImageEXT"};
     static const std::string tile_attachment_qcom{"TileAttachmentQCOM"};
     static const std::string node_payload_amdx{"NodePayloadAMDX"};

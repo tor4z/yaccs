@@ -5,6 +5,25 @@
 #include "yaccs/ops.hpp"
 #include <onnx.pb.h>
 
+#define DEF_SINGLETON(classname)                                                \
+public:                                                                         \
+    static inline classname* instance()                                         \
+    {                                                                           \
+        static classname *instance_ = nullptr;                                  \
+        static std::once_flag flag;                                             \
+        if (!instance_) {                                                       \
+            std::call_once(flag, [&](){                                         \
+                instance_ = new (std::nothrow) classname();                     \
+            });                                                                 \
+        }                                                                       \
+        return instance_;                                                       \
+    }                                                                           \
+private:                                                                        \
+    classname(const classname&) = delete;                                       \
+    classname& operator=(const classname&) = delete;                            \
+    classname(const classname&&) = delete;                                      \
+    classname& operator=(const classname&&) = delete;
+
 
 void tensor_type_from_onnx(const onnx::TypeProto_Tensor& onnx_tensor, TensorType& tensor_type,
     const std::unordered_map<std::string, int>& dynamic_axes);

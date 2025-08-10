@@ -1,6 +1,7 @@
 #include "yaccs/code_gen/program.hpp"
 #include "yaccs/utils.hpp"
 #include "yaccs/ops.hpp"
+#include <iostream>
 #include <onnx.pb.h>
 #include <unordered_map>
 #include <cassert>
@@ -32,6 +33,10 @@ int main(int argc, char** argv)
 
     onnx::ModelProto model;
     std::ifstream ifs{onnx_filename, std::ios::in};
+    if (!ifs.is_open()) {
+        std::cerr << "Can not open file: " << onnx_filename << "\nFailed.\n";
+        return 1;
+    }
     model.ParseFromIstream(&ifs);
     ifs.close();
 

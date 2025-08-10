@@ -28,12 +28,14 @@ private:
     friend struct ext::Ext;
 
     std::vector<id_t> layers_;  // layers in order
+    std::vector<id_t> entry_listed_ids_;
     std::unordered_map<id_t, FunctionHeaderDef> global_funcs_;
     std::unordered_map<std::string, TensorMeta> global_tensors_;
     std::string name_;
     CodeGen code_gen_;
     ext::Ext std_450_;
 
+    void push_entry_listed_id(id_t id);
     id_t add_function_prologue(id_t return_type_id);
     void add_function_epilogue();
     id_t add_void_type();

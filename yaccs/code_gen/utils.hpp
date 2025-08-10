@@ -49,8 +49,9 @@ inline bool value_eq<double>(double a, double b)
 inline bool should_decorate(StorageClass sc)
 {
     switch (sc) {
-    case SC_UNIFORM:    return true;
-    default:            return false;
+    case SC_UNIFORM:            return true;
+    case SC_STORAGE_BUFFER:     return true;
+    default:                    return false;
     }
 }
 

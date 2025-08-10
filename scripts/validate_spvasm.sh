@@ -6,6 +6,6 @@ if [[ $# -eq 0 ]]; then
 fi
 
 
-spirv-as $1 --target-env vulkan1.0 -o $1.spv &&\
-spirv-val --target-env vulkan1.0 $1.spv &&\
+spirv-as $1 --target-env vulkan1.4 -o $1.spv &&\
+spirv-val --target-env vulkan1.4 $1.spv &&\
 spirv-cross --vulkan-semantics $1.spv | highlight --syntax c -O xterm256 --style darkness

@@ -1,27 +1,37 @@
 #include "yaccs/code_gen/program.hpp"
 #include "yaccs/utils.hpp"
 #include "yaccs/ops.hpp"
+#include <onnx.pb.h>
+#include <unordered_map>
+#include <cassert>
+#include <cstdlib>
+#include <fstream>
+#include <string>
+
 #define FLAGS_IMPLEMENTATION
 #include "flags.hpp"
-#include <cassert>
-#include <endian.h>
-#include <fstream>
-#include <iostream>
-#include <onnx.pb.h>
-#include <string>
-#include <unordered_map>
-
 
 
 int main(int argc, char** argv)
 {
     Flags::parse(argc, argv)
+        ->with_arg<std::string>("output", 'o', "a.spv", "The output spv filename")
+        ->with_opt("S", 'S', "Compile only, not assemble")
         ->set_help("Yaccs compiler");
 
-    std::string filename{"../examples/01/model.onnx"};
+    if (Flags::raw_params().empty()) {
+        std::cerr << "yaccs: fatal error: no input file\n"
+            << "compilation terminated\n";
+        exit(1);
+    }
+
+    std::string onnx_filename{Flags::raw_params().at(0)};
+    std::string apvasm_filename{extract_filename(onnx_filename) + ".spvasm"};
+    std::string apv_filename{Flags::arg<std::string>("output")};
+    std::cout << "Compiling " << onnx_filename << "\n";
 
     onnx::ModelProto model;
-    std::ifstream ifs{filename, std::ios::in};
+    std::ifstream ifs{onnx_filename, std::ios::in};
     model.ParseFromIstream(&ifs);
     ifs.close();
 
@@ -33,7 +43,7 @@ int main(int argc, char** argv)
     };
 
     Program program;
-    program.set_name(extract_filename(filename) + ".spvasm");
+    program.set_name(apvasm_filename);
 
     for (const auto& it : model.graph().input()) {
         if (it.type().has_tensor_type()) {
@@ -69,5 +79,10 @@ int main(int argc, char** argv)
 
     program.set_main();
     program.dump_ir();
+
+    if (!Flags::opt("S")) {
+        invoke_spirv_as(apvasm_filename, apv_filename);
+        remove_file(apvasm_filename);
+    }
     return 0;
 }

@@ -268,9 +268,9 @@ id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc, bo
     DecorateStructDef dsd;
 
     std::vector<id_t> struct_ids;
-    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 16;
+    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 4;
     struct_ids.push_back(uint_id);   // dims
-    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 16 * MAX_TENSOR_DIMS; 
+    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 4 * MAX_TENSOR_DIMS; 
     struct_ids.push_back(shape_id); // shape
     dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
     struct_ids.push_back(data_id);  // data

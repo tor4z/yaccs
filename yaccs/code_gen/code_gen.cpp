@@ -54,7 +54,7 @@ void CodeGen::push_struct_decorate(const DecorateStructDef& dsd)
 
 void CodeGen::push_array_decorate(const DecorateArrayDef& dad)
 {
-    decorate_ss_ << "OpDecorate %" << dad.array_type_id << " ArrayStride 16\n";
+    decorate_ss_ << "OpDecorate %" << dad.array_type_id << " ArrayStride 4\n";
 }
 
 void CodeGen::push_builtin_decorate(const DecorateBuiltInDef& built_in)

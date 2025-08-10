@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}/${CMAKE_CURRENT_LIST_DIR}/3rdparty/cmake")
 
 include(onnx)
+include(flags.hpp)
 
 
 include_directories(${CMAKE_CURRENT_LIST_DIR})

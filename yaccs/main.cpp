@@ -1,6 +1,8 @@
-#include "code_gen/program.hpp"
+#include "yaccs/code_gen/program.hpp"
 #include "yaccs/utils.hpp"
 #include "yaccs/ops.hpp"
+#define FLAGS_IMPLEMENTATION
+#include "flags.hpp"
 #include <cassert>
 #include <endian.h>
 #include <fstream>
@@ -13,6 +15,9 @@
 
 int main(int argc, char** argv)
 {
+    Flags::parse(argc, argv)
+        ->set_help("Yaccs compiler");
+
     std::string filename{"../examples/01/model.onnx"};
 
     onnx::ModelProto model;

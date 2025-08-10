@@ -1,5 +1,8 @@
 file(GLOB_RECURSE SRCS *.cpp)
 
+include_directories(${flags_INCS})
+
+
 add_executable(${PROJECT_NAME}
     ${SRCS}
     ${ONNX_SRC}

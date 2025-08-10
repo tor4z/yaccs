@@ -1,3 +1,6 @@
 [submodule "3rdparty/flags.hpp"]
 	path = 3rdparty/flags.hpp
 	url = git@github.com:tor4z/flags.hpp.git
+[submodule "3rdparty/cov.hpp"]
+	path = 3rdparty/cov.hpp
+	url = git@github.com:tor4z/cov.hpp.git

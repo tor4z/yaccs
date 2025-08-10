@@ -15,3 +15,4 @@ include(flags.hpp)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR})
 add_subdirectory(yaccs)
+add_subdirectory(examples)

@@ -17,12 +17,12 @@ int main()
         auto instance{cov::App::new_instance()};
         instance.load_shader(shader_path);
 
-        std::vector<char> input(4 + 6 * 4 + 4 * 4);
+        std::vector<char> input(4 + 2 * 4 + 4 * 4);
         uint32_t dims{2};
-        uint32_t shape[6]{1, 4, 0, 0, 0, 0};
+        uint32_t shape[2]{1, 4};
         memcpy(input.data(), &dims, sizeof(dims));
-        memcpy(input.data() + 4, shape, 6 * sizeof(uint32_t));
-        std::vector<char> output(4 + 6 * 4 + 4 * 4, 0);
+        memcpy(input.data() + 4, shape, dims * sizeof(uint32_t));
+        std::vector<char> output(4 + 2 * 4 + 4 * 4, 0);
 
         instance.set_inputs({
             {input.data(), input.size()},
@@ -38,12 +38,12 @@ int main()
         std::cout << "Output:\n";
         std::cout << "dims: " << *reinterpret_cast<uint32_t*>(output.data()) << "\n";
         std::cout << "shape: ";
-        for (int i = 0; i < 6; ++i) {
+        for (int i = 0; i < 2; ++i) {
             std::cout << *reinterpret_cast<uint32_t*>(output.data() + 4 * (i + 1)) << " ";
         }
         std::cout << "\ndata: ";
         for (int i = 0; i < 4; ++i) {
-            std::cout << *reinterpret_cast<float*>(output.data() + 4 * (i + 1 + 6)) << " ";
+            std::cout << *reinterpret_cast<float*>(output.data() + 4 * (i + 1 + 2)) << " ";
         }
         std::cout << "\n";
     }

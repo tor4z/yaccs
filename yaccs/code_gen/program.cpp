@@ -241,7 +241,7 @@ id_t Program::add_array_dtype(id_t dtype, uint32_t length, StorageClass sc, bool
     return array_type_id;
 }
 
-id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc, bool reuse)
+id_t Program::add_tensor_type(const TensorType& tt, StorageClass sc, bool reuse)
 {
     /*
      * {
@@ -254,13 +254,13 @@ id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc, bo
     static std::vector<DecorateStructDef> decos;
 
     int num_elems{1};
-    for (int i = 0; i < tensor_type.dims; ++i) {
-        num_elems *= tensor_type.shape[i];
+    for (int i = 0; i < tt.dims; ++i) {
+        num_elems *= tt.shape.at(i);
     }
 
-    auto dtype_id{add_dtype(tensor_type.dtype)};    // define type dtype
+    auto dtype_id{add_dtype(tt.dtype)};    // define type dtype
     auto uint_id{add_dtype(DT_UINT32)};               // define uint type
-    auto shape_id{add_array_dtype(uint_id, MAX_TENSOR_DIMS, sc, reuse)};
+    auto shape_id{add_array_dtype(uint_id, tt.dims, sc, reuse)};
     auto data_id{add_array_dtype(dtype_id, num_elems, sc, reuse)};
 
     uint32_t offset{0};
@@ -270,7 +270,7 @@ id_t Program::add_tensor_type(const TensorType& tensor_type, StorageClass sc, bo
     std::vector<id_t> struct_ids;
     dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 4;
     struct_ids.push_back(uint_id);   // dims
-    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 4 * MAX_TENSOR_DIMS; 
+    dsd.member_deco.push_back({.field=field_idx++, .offset = offset}); offset += 4 * tt.dims; 
     struct_ids.push_back(shape_id); // shape
     dsd.member_deco.push_back({.field=field_idx++, .offset = offset});
     struct_ids.push_back(data_id);  // data
@@ -333,13 +333,13 @@ id_t Program::add_const_tensor(const Tensor& tensor)
 
     // setup shape
     int num_elems{1};
-    std::vector<id_t> shape(MAX_TENSOR_DIMS);
-    for (int i = 0; i < MAX_TENSOR_DIMS; ++i) {
+    std::vector<id_t> shape(tensor.tt.dims);
+    for (int i = 0; i < tensor.tt.dims; ++i) {
         num_elems *= i < tensor.tt.dims ? tensor.tt.shape[i] : 1;
         shape.at(i) = add_const(DT_UINT32, i < tensor.tt.dims ? tensor.tt.shape[i] : 0);
     }
     auto uint_id{add_dtype(DT_UINT32)};
-    auto shape_type_id{add_array_dtype(uint_id, MAX_TENSOR_DIMS, SC_GLOBAL_CONST)};
+    auto shape_type_id{add_array_dtype(uint_id, tensor.tt.dims, SC_GLOBAL_CONST)};
     sd.elem_ids.push_back(add_const_array(shape_type_id, shape));
 
     // setup data
@@ -587,7 +587,7 @@ void Program::add_relu(const OpRelu& relu)
         tensor_Y.tt.name = relu.Y.tt.name;
         tensor_Y.tt.dtype = X.dtype;
         tensor_Y.tt.row_major = true;
-        add_shared_tensor(tensor_Y);
+        add_shared_tensor(relu.Y);
         const auto& Y{global_tensors_.at(relu.Y.tt.name)};
 
         // Setup output tensor dims and shape

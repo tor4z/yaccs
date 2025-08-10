@@ -50,6 +50,7 @@ int main(int argc, char** argv)
     Program program;
     program.set_name(apvasm_filename);
 
+    // setup input
     for (const auto& it : model.graph().input()) {
         if (it.type().has_tensor_type()) {
             TensorType tt{};
@@ -59,6 +60,7 @@ int main(int argc, char** argv)
         }
     }
 
+    // setup output
     for (const auto& it : model.graph().output()) {
         if (it.type().has_tensor_type()) {
             TensorType tt{};

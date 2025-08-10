@@ -2,6 +2,7 @@
 #include "yaccs/dtype.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <ios>
@@ -9,13 +10,11 @@
 
 TensorType::TensorType()
     : dims(0)
-{
-    memset(shape, 0, MAX_TENSOR_DIMS * sizeof(shape[0]));
-}
+{}
 
 TensorType::TensorType(const TensorType& tt)
 {
-    memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    shape = tt.shape;
     name = tt.name;
     dtype = tt.dtype;
     dims = tt.dims;
@@ -25,13 +24,14 @@ TensorType::TensorType(const TensorType& tt)
 TensorType::TensorType(TensorType&& tt)
 {
     // copy
-    memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    shape = tt.shape;
     name = tt.name;
     dtype = tt.dtype;
     dims = tt.dims;
     row_major = tt.row_major;
     // clear
-    memset(tt.shape, 0, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    // memset(tt.shape, 0, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    tt.shape.fill(0);
     tt.name = "";
     tt.dtype = DT_UNDEFINED;
     tt.dims = 0;
@@ -40,7 +40,7 @@ TensorType::TensorType(TensorType&& tt)
 
 TensorType& TensorType::operator=(const TensorType& tt)
 {
-    memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+    shape = tt.shape;
     name = tt.name;
     dtype = tt.dtype;
     dims = tt.dims;
@@ -52,13 +52,13 @@ TensorType& TensorType::operator=(TensorType&& tt)
 {
     if (&tt != this) {
         // copy
-        memcpy(shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+        shape = tt.shape;
         name = tt.name;
         dtype = tt.dtype;
         dims = tt.dims;
         row_major = tt.row_major;
         // clear
-        memset(tt.shape, 0, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
+        tt.shape.fill(0);
         tt.name = "";
         tt.dtype = DT_UNDEFINED;
         tt.dims = 0;
@@ -67,12 +67,12 @@ TensorType& TensorType::operator=(TensorType&& tt)
     return *this;
 }
 
-int TensorType::transposed_idx(int i) const
+int TensorType::transposed_idx(uint32_t i) const
 {
     if (!row_major && dims > 1) {
-        int c{i / shape[1]};
-        int r{i % shape[1]};
-        i = r * shape[0] + c;
+        uint32_t c{i / shape.at(1)};
+        uint32_t r{i % shape.at(1)};
+        i = r * shape.at(0) + c;
     }
     return i;
 }
@@ -86,8 +86,8 @@ Tensor Tensor::transpose() const
     result.tt.dtype = tt.dtype;
     result.tt.dims = tt.dims;
     result.tt.row_major = !tt.row_major;
-    memcpy(result.tt.shape, tt.shape, MAX_TENSOR_DIMS * sizeof(tt.shape[0]));
-    std::swap(result.tt.shape[tt.dims - 2], result.tt.shape[tt.dims - 1]);
+    result.tt.shape = tt.shape;
+    std::swap(result.tt.shape.at(tt.dims - 2), result.tt.shape.at(tt.dims - 1));
     result.data = data;
     return result;
 }
@@ -135,7 +135,7 @@ std::ostream& operator<<(std::ostream& os, const Tensor& tensor)
         for (int i = 0; i < num_elems; ++i) {
             os << std::setw(8) << std::fixed << std::setprecision(5)
                 << tensor.at<DT_FLOAT>(i) << ", ";
-            if ((i + 1) % std::max(1, tensor.tt.shape[1]) == 0) os << "\n";
+            if ((i + 1) % std::max(1u, tensor.tt.shape[1]) == 0) os << "\n";
         }
         break;
     default:

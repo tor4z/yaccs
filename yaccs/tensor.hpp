@@ -2,6 +2,7 @@
 #define YACCS_TENSOR_H_
 
 #include "yaccs/dtype.hpp"
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <endian.h>
@@ -9,19 +10,18 @@
 #include <string>
 #include <vector>
 
-#define MAX_TENSOR_DIMS 6
-
+using Shape = std::array<uint32_t, 6>;
 
 struct TensorType
 {
     TensorType();
-    int transposed_idx(int i) const;
+    int transposed_idx(uint32_t i) const;
     TensorType(const TensorType& tt);
     TensorType(TensorType&& tt);
     TensorType& operator=(const TensorType& tt);
     TensorType& operator=(TensorType&& tt);
 
-    int shape[MAX_TENSOR_DIMS];
+    Shape shape;
     std::string name;
     DType dtype;
     int dims;

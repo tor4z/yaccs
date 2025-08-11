@@ -1,5 +1,5 @@
-#include "yaccs/code_gen/utils.hpp"
-#include "yaccs/code_gen/def.hpp"
+#include "yaccs/baker/utils.hpp"
+#include "yaccs/baker/def.hpp"
 #include <cassert>
 
 StorageClass storage_class_for_accessment(StorageClass sc)

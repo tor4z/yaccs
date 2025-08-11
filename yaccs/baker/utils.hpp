@@ -1,7 +1,7 @@
 #ifndef YACCS_CODE_GEN_UTILS_H_
 #define YACCS_CODE_GEN_UTILS_H_
 
-#include "yaccs/code_gen/def.hpp"
+#include "yaccs/baker/def.hpp"
 #include <cassert>
 #include <cstdlib>
 #include <limits>

@@ -1,7 +1,7 @@
-#include "yaccs/code_gen/exts/exts.hpp"
-#include "yaccs/code_gen/exts/def.hpp"
-#include "yaccs/code_gen/program.hpp"
-#include "yaccs/code_gen/utils.hpp"
+#include "yaccs/baker/exts/exts.hpp"
+#include "yaccs/baker/exts/def.hpp"
+#include "yaccs/baker/program.hpp"
+#include "yaccs/baker/utils.hpp"
 #include "yaccs/dtype.hpp"
 #include <cassert>
 

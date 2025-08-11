@@ -1,13 +1,13 @@
 #ifndef YACCS_PROGRAM_H_
 #define YACCS_PROGRAM_H_
 
-#include "yaccs/code_gen/def.hpp"
-#include "yaccs/code_gen/exts/exts.hpp"
-#include "yaccs/code_gen/utils.hpp"
+#include "yaccs/baker/def.hpp"
+#include "yaccs/baker/exts/exts.hpp"
+#include "yaccs/baker/utils.hpp"
 #include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/dtype.hpp"
 #include "yaccs/tensor.hpp"
-#include "yaccs/ops.hpp"
+#include "yaccs/onnx/ops.hpp"
 #include <cstdint>
 #include <string>
 #include <unordered_map>

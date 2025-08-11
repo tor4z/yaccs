@@ -1,6 +1,7 @@
-#include "yaccs/code_gen/program.hpp"
+#include "yaccs/baker/program.hpp"
 #include "yaccs/utils.hpp"
-#include "yaccs/ops.hpp"
+#include "yaccs/onnx/ops.hpp"
+#include "yaccs/onnx/parser.hpp"
 #include <iostream>
 #include <onnx.pb.h>
 #include <unordered_map>

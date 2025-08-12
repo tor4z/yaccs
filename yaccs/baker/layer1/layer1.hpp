@@ -8,13 +8,14 @@
 #include "yaccs/dtype.hpp"
 #include <cstdint>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 
 struct Layer1
 {
     Layer1();
-    // function component    
+    // function component
     void add_function_epilogue();
     id_t add_function_prologue(id_t return_type_id);
     void add_return();
@@ -36,16 +37,23 @@ struct Layer1
     id_t add_array_dtype(id_t dtype, uint32_t length, StorageClass sc, bool reuse=true);
     id_t add_dtype(DType dtype);
 
+    void set_entry(id_t main_id);
+    void add_binding(id_t var_id, int binding, int set);
+    void add_struct_decorate(id_t type_id, Decoration deco, StorageClass sc,
+        const std::vector<std::pair<uint32_t, uint32_t>>& member_deco);
+
     // variable & const
     template<typename T>
     id_t add_const(DType dtype, T value);
     id_t add_type_pointer(id_t type_id, StorageClass sc);
     id_t add_const_array(id_t arr_type, const std::vector<id_t>& elem_ids);
+    id_t add_const_struct(id_t struct_id, const std::vector<id_t>& elem_ids);
     id_t add_var(id_t type_id, StorageClass sc, id_t initializer = 0);
 
     // arithmatic
     id_t binary_op(BinaryOperator bo, id_t func_id, id_t type_id, id_t op1_id, id_t op2_id);
 
+    ext::Ext* std450() { return &std450_; }
     CodeGen* code_gen() { return &code_gen_; }
     void push_entry_listed_id(id_t id);
     FunctionHeaderDef& find_function_def(id_t id);
@@ -53,7 +61,7 @@ private:
     std::vector<id_t> entry_listed_ids_;
     std::unordered_map<id_t, FunctionHeaderDef> global_funcs_;
     CodeGen code_gen_;
-    ext::Ext std_450_;
+    ext::Ext std450_;
 }; // struct Layer1
 
 template<typename T>

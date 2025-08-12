@@ -2,7 +2,7 @@
 #define YACCS_BAKER_LAYER3_H_
 
 #include "yaccs/baker/def.hpp"
-#include "yaccs/baker/layer2.hpp"
+#include "yaccs/baker/layer2/layer2.hpp"
 #include "yaccs/tensor.hpp"
 #include "yaccs/onnx/ops.hpp"
 #include <unordered_map>
@@ -22,8 +22,10 @@ private:
     std::vector<id_t> layers_;  // layers in order
     std::unordered_map<std::string, TensorMeta> global_tensors_;
     std::string name_;
-    Layer2 layer2_;
+    Layer1* layer1_;
+    Layer2* layer2_;
 
+    id_t add_const_tensor_element(DType dtype, int elem_idx, const Tensor& tensor);
     id_t add_const_tensor(const Tensor& tensor);
     id_t add_shared_tensor(const Tensor& tensor);
     id_t add_tensor_type(const TensorType& tensor_type, StorageClass sc, bool reuse=true);

@@ -1,12 +1,26 @@
 #include "yaccs/baker/layer1/layer1.hpp"
 #include "yaccs/baker/layer1/utils.hpp"
+#include "yaccs/baker/utils.hpp"
 #include <cstring>
 
 
 Layer1::Layer1()
 {
     code_gen_.push_header();
-    std_450_ = ext::Ext(this, "GLSL.std.450");
+    std450_ = ext::Ext(this, "GLSL.std.450");
+}
+
+void Layer1::set_entry(id_t main_id)
+{
+    push_entry_listed_id(global_invocation_id());
+
+    EntryDef ed;
+    ed.local_size_x = 4;
+    ed.local_size_y = 4;
+    ed.local_size_z = 1;
+    ed.input_ids = entry_listed_ids_;
+    ed.main_id = main_id;
+    code_gen_.push_entry(ed);
 }
 
 id_t Layer1::add_dtype(DType dtype)
@@ -152,6 +166,75 @@ id_t Layer1::add_const_array(id_t arr_type, const std::vector<id_t>& elem_ids)
     dfs.push_back(ccd);
     code_gen_.push_const_composite(ccd);
     return ccd.id;
+}
+
+
+id_t Layer1::add_const_struct(id_t type_id, const std::vector<id_t>& elem_ids)
+{
+    static std::vector<ConstCompositeDef> dfs;
+
+    ConstCompositeDef sd;
+    sd.type_id = type_id;
+    sd.id = alloc_id();
+    sd.elem_ids = elem_ids;
+
+    auto const_struct_matched{[&sd] (const ConstCompositeDef& target) -> bool {
+        if (target.type_id != sd.type_id) {
+            return false;
+        }
+        return sd.elem_ids == target.elem_ids;
+    }};
+
+    bool should_create_const_tensor{true};
+    for (const auto& it : dfs) {
+        if (const_struct_matched(it)) {
+            sd.id = it.id;
+            should_create_const_tensor = false;
+            break;
+        }
+    }
+
+    if (should_create_const_tensor) {
+        dfs.push_back(sd);
+        code_gen_.push_const_composite(sd);
+    }
+
+    return sd.id;
+}
+
+void Layer1::add_struct_decorate(id_t type_id, Decoration deco, StorageClass sc,
+    const std::vector<std::pair<uint32_t, uint32_t>>& member_deco)
+{
+    static std::vector<DecorateStructDef> decos;
+
+    DecorateStructDef dsd;
+    dsd.deco = DECO_NONE;
+    dsd.struct_type_id = type_id;
+    for (const auto& it : member_deco) {
+        dsd.member_deco.push_back({.field = it.first, .offset = it.second});
+    }
+
+    auto already_decorate_in{[&dsd] (const std::vector<DecorateStructDef>& targets) -> bool {
+        for (const auto& it : targets) {
+            if (it.struct_type_id == dsd.struct_type_id) return true;
+        }
+        return false;
+    }};
+
+    if (should_decorate(sc) && !already_decorate_in(decos)) {
+        decos.push_back(dsd);
+        code_gen_.push_struct_decorate(dsd);
+    }
+}
+
+void Layer1::add_binding(id_t var_id, int binding, int set)
+{
+    DecorateSetBindingDef binding_deco;
+
+    binding_deco.binding = binding;
+    binding_deco.set = set;
+    binding_deco.target = var_id;
+    code_gen_.push_decorate_set_binding(binding_deco);
 }
 
 id_t Layer1::add_void_type()

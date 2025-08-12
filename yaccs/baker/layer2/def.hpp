@@ -6,6 +6,7 @@
 
 struct FunctionDef
 {
+    id_t id;
 }; // struct FunctionDef
 
 struct ForLoopDef

@@ -1,10 +1,11 @@
 #ifndef YACCS_BAKER_LAYER1_H_
 #define YACCS_BAKER_LAYER1_H_
 
-#include "yaccs/baker/def.hpp"
 #include "yaccs/baker/layer1/exts/exts.hpp"
-#include "yaccs/code_gen/code_gen.hpp"
+#include "yaccs/baker/layer1/utils.hpp"
 #include "yaccs/baker/utils.hpp"
+#include "yaccs/baker/def.hpp"
+#include "yaccs/code_gen/code_gen.hpp"
 #include "yaccs/dtype.hpp"
 #include <cstdint>
 #include <unordered_map>

@@ -11,8 +11,9 @@ Layer2::Layer2(Layer1* layer1)
 void Layer2::begin_function(FunctionDef& def, Type type)
 {
     id_t return_type_id{};
+
     switch (type) {
-    case T_VOID:    return_type_id = layer1_->add_void_type();
+    case T_VOID:    return_type_id = layer1_->add_void_type(); break;
     default:        assert(false && "Not supported function return type");
     }
 

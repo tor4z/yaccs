@@ -228,9 +228,7 @@ id_t Layer3::add_const_tensor_element(DType dtype, int elem_idx, const Tensor& t
 id_t Layer3::access_tensor_dims(id_t func_id, const TensorMeta& tm)
 {
     std::vector<uint32_t> access_indices{};
-    if (tm.storage_class == SC_UNIFORM) {
-        access_indices = {0, 0};
-    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
+    if (tm.storage_class == SC_UNIFORM || tm.storage_class == SC_STORAGE_BUFFER) {
         access_indices = {0, 0};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
         return tm.dims_id;
@@ -261,9 +259,7 @@ id_t Layer3::access_tensor_shape_index(id_t func_id, const TensorMeta& tm, uint3
     def.index = index;
 
     std::vector<uint32_t> access_indices{};
-    if (tm.storage_class == SC_UNIFORM) {
-        access_indices = {0, 1, index};
-    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
+    if (tm.storage_class == SC_UNIFORM || tm.storage_class == SC_STORAGE_BUFFER) {
         access_indices = {0, 1, index};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
         def.base_id = layer1_->add_var(tm.shape_type_id, SC_FUNCTION, tm.shape_id);
@@ -299,9 +295,7 @@ id_t Layer3::load_tensor_element(id_t func_id, const TensorMeta& tm, id_t index_
     auto tensor_index_id{layer1_->add_const(DT_UINT32, 0)}; // for uniform input
 
     id_t base_id{tm.id};
-    if (tm.storage_class == SC_UNIFORM) {
-        access_index_ids = {tensor_index_id, data_index_id, index_id};
-    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
+    if (tm.storage_class == SC_UNIFORM || tm.storage_class == SC_STORAGE_BUFFER) {
         access_index_ids = {tensor_index_id, data_index_id, index_id};
     } else if (tm.storage_class == SC_GLOBAL_CONST) {
         base_id = layer1_->add_var(tm.data_type_id, SC_FUNCTION, tm.data_id);
@@ -332,9 +326,7 @@ void Layer3::store_tensor_element(id_t func_id, const TensorMeta& tm, id_t index
     auto tensor_index_id{layer1_->add_const(DT_UINT32, 0)}; // for uniform input
 
     std::vector<id_t> access_index_ids{};
-    if (tm.storage_class == SC_UNIFORM) {
-        access_index_ids = {tensor_index_id, data_index_id, index_id};
-    } else if (tm.storage_class == SC_STORAGE_BUFFER) {
+    if (tm.storage_class == SC_UNIFORM || tm.storage_class == SC_STORAGE_BUFFER) {
         access_index_ids = {tensor_index_id, data_index_id, index_id};
     } else {
         access_index_ids = {data_index_id, index_id};

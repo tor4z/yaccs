@@ -208,7 +208,7 @@ void Layer1::add_struct_decorate(id_t type_id, Decoration deco, StorageClass sc,
     static std::vector<DecorateStructDef> decos;
 
     DecorateStructDef dsd;
-    dsd.deco = DECO_NONE;
+    dsd.deco = deco;
     dsd.struct_type_id = type_id;
     for (const auto& it : member_deco) {
         dsd.member_deco.push_back({.field = it.first, .offset = it.second});

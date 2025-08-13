@@ -1,6 +1,7 @@
 #include "yaccs/code_gen/code_gen.hpp"
-#include "yaccs/code_gen/def.hpp"
-#include "yaccs/code_gen/utils.hpp"
+#include "yaccs/baker/def.hpp"
+#include "yaccs/baker/layer1/utils.hpp"
+#include "yaccs/baker/utils.hpp"
 #include <cassert>
 
 void CodeGen::push_function(const FunctionHeaderDef& fh)

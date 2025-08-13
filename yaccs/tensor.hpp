@@ -20,6 +20,7 @@ struct TensorType
     TensorType(TensorType&& tt);
     TensorType& operator=(const TensorType& tt);
     TensorType& operator=(TensorType&& tt);
+    int num_elems() const;
 
     Shape shape;
     std::string name;

@@ -1,6 +1,7 @@
-#include "yaccs/code_gen/program.hpp"
+#include "yaccs/baker/layer3/layer3.hpp"
 #include "yaccs/utils.hpp"
-#include "yaccs/ops.hpp"
+#include "yaccs/onnx/ops.hpp"
+#include "yaccs/onnx/parser.hpp"
 #include <iostream>
 #include <onnx.pb.h>
 #include <unordered_map>
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
         {"batch_size", 1}
     };
 
-    Program program;
+    Layer3 program;
     program.set_name(apvasm_filename);
 
     // setup input

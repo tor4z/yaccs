@@ -1,7 +1,7 @@
 #ifndef YACCS_EXTS_DEF_H_
 #define YACCS_EXTS_DEF_H_
 
-#include "yaccs/code_gen/def.hpp"
+#include "yaccs/baker/def.hpp"
 namespace ext {
 
 enum BinaryOperator

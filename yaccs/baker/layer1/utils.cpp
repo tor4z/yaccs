@@ -1,5 +1,4 @@
-#include "yaccs/code_gen/utils.hpp"
-#include "yaccs/code_gen/def.hpp"
+#include "yaccs/baker/layer1/utils.hpp"
 #include <cassert>
 
 StorageClass storage_class_for_accessment(StorageClass sc)
@@ -145,4 +144,3 @@ const std::string& as_string(CmpOp cmp_op)
 
     return co_gt; // Unreachable, return something to suppress compile warning
 }
-

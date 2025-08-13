@@ -67,6 +67,15 @@ TensorType& TensorType::operator=(TensorType&& tt)
     return *this;
 }
 
+int TensorType::num_elems() const
+{
+    int num_elems{1};
+    for (int i = 0; i < dims; ++i) {
+        num_elems *= shape.at(i);
+    }
+    return num_elems;
+}
+
 int TensorType::transposed_idx(uint32_t i) const
 {
     if (!row_major && dims > 1) {
